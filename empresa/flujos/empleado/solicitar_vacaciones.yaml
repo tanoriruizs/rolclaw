@@ -1,0 +1,14 @@
+id: solicitar_vacaciones
+nombre: Solicitar vacaciones
+roles: [empleado]
+descripcion: Solicita un periodo de vacaciones; siempre requiere aprobación de Gerencia.
+datos_requeridos:
+  - { campo: fecha_inicio, tipo: fecha }
+  - { campo: fecha_fin, tipo: fecha }
+  - { campo: dias_habiles, tipo: entero, min: 1 }
+pasos:
+  - Consultar en la política de vacaciones cuántos días corresponden por antigüedad
+  - Calcular los días hábiles del periodo usando la herramienta calcular
+  - Crear la solicitud, que queda pendiente de aprobación
+reglas:
+  - { campo: dias_habiles, mayor_que: 0, accion: requiere_aprobacion, aprueba: gerente }

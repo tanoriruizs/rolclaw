@@ -1,0 +1,15 @@
+id: alta_cliente
+nombre: Alta de cliente
+roles: [ventas]
+descripcion: Registra un cliente nuevo con su línea de crédito (0 si paga de contado).
+datos_requeridos:
+  - { campo: razon_social, tipo: texto }
+  - { campo: rfc, tipo: texto }
+  - { campo: contacto, tipo: texto }
+  - { campo: limite_credito, tipo: decimal, min: 0 }
+pasos:
+  - Pedir razón social, RFC y nombre de contacto
+  - Preguntar si necesita crédito y por cuánto
+  - Si el crédito supera $100,000 MXN, la solicitud queda pendiente de aprobación
+reglas:
+  - { campo: limite_credito, mayor_que: 100000, accion: requiere_aprobacion, aprueba: gerente }

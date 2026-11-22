@@ -1,0 +1,10 @@
+id: constancia_laboral
+nombre: Constancia laboral
+roles: [empleado]
+descripcion: Solicita una constancia de trabajo; se aprueba automáticamente.
+datos_requeridos:
+  - { campo: dirigida_a, tipo: texto }
+  - { campo: motivo, tipo: texto }
+pasos:
+  - Preguntar a quién va dirigida la constancia
+  - Preguntar el motivo

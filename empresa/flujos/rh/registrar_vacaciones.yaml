@@ -1,0 +1,13 @@
+id: registrar_vacaciones
+nombre: Registrar vacaciones aprobadas
+roles: [rh]
+descripcion: Registra en el expediente las vacaciones ya aprobadas de un colaborador.
+datos_requeridos:
+  - { campo: empleado_id, tipo: texto }
+  - { campo: fecha_inicio, tipo: fecha }
+  - { campo: fecha_fin, tipo: fecha }
+  - { campo: dias_habiles, tipo: entero, min: 1 }
+pasos:
+  - Confirmar el número de empleado
+  - Calcular los días hábiles del periodo usando la herramienta calcular
+  - Registrar el periodo

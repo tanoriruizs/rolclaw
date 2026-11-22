@@ -1,0 +1,16 @@
+id: cotizacion_descuento
+nombre: Cotización con descuento
+roles: [ventas]
+descripcion: Cotiza productos del catálogo aplicando un descuento.
+datos_requeridos:
+  - { campo: cliente, tipo: texto }
+  - { campo: producto_id, tipo: texto }
+  - { campo: cantidad, tipo: entero, min: 1 }
+  - { campo: descuento_pct, tipo: decimal, min: 0, max: 100 }
+pasos:
+  - Verificar que el cliente exista o darlo de alta
+  - Calcular el total con descuento usando la herramienta calcular
+  - Si el descuento supera el límite, la solicitud queda pendiente de aprobación
+reglas:
+  - { campo: descuento_pct, mayor_que: 25, accion: rechazar, mensaje: "El descuento máximo permitido es 25%." }
+  - { campo: descuento_pct, mayor_que: 10, accion: requiere_aprobacion, aprueba: gerente }
