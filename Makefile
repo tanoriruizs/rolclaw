@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := help
 UV := uv
+COMPOSE := docker compose
 
-.PHONY: help setup tokens run ingest lint format test secrets ci
+.PHONY: help setup tokens up down logs ps ingest run lint format test secrets ci
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -14,12 +15,24 @@ setup: ## Instala dependencias y los hooks de pre-commit
 tokens: ## Genera tokens de rol y secretos locales en .env
 	$(UV) run python scripts/gen_tokens.py
 
-run: ## Levanta el servidor local en http://127.0.0.1:8000 (usa .env)
+up: ## Construye y levanta los servicios; espera a que estén sanos
+	$(COMPOSE) up -d --build --wait
+
+down: ## Detiene los servicios (los datos de Redis se conservan)
+	$(COMPOSE) down
+
+logs: ## Sigue los logs de todos los servicios
+	$(COMPOSE) logs -f
+
+ps: ## Estado y salud de los servicios
+	$(COMPOSE) ps
+
+ingest: ## Re-indexa los documentos de empresa/ dentro del contenedor
+	$(COMPOSE) exec mcp-server python -m assistant.rag.ingest
+
+run: ## Servidor local con recarga automática (necesita un Redis en localhost:6379)
 	$(UV) run --env-file .env uvicorn assistant.main:create_app --factory --reload \
 		--host 127.0.0.1 --port 8000
-
-ingest: ## Re-indexa los documentos de empresa/ en Redis
-	$(UV) run --env-file .env python -m assistant.rag.ingest
 
 lint: ## ruff (lint + formato) y mypy --strict
 	$(UV) run ruff check .
