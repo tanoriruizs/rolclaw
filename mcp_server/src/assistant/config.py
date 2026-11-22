@@ -1,0 +1,32 @@
+"""Configuración del servidor a partir de variables de entorno."""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Mapping
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ROLE_TOKEN_PREFIX = "ROLE_TOKEN_"  # noqa: S105 - es un prefijo, no un secreto
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(frozen=True)
+
+    empresa_dir: Path = Path("empresa")
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    role_tokens: dict[str, SecretStr] = Field(default_factory=dict)
+
+    @classmethod
+    def from_environ(cls, environ: Mapping[str, str] | None = None) -> Settings:
+        """Lee ROLE_TOKEN_<ROL> para cada rol; así agregar un rol no requiere tocar código."""
+        env = os.environ if environ is None else environ
+        tokens = {
+            key.removeprefix(ROLE_TOKEN_PREFIX).lower(): SecretStr(value)
+            for key, value in env.items()
+            if key.startswith(ROLE_TOKEN_PREFIX) and value
+        }
+        return cls(role_tokens=tokens)
