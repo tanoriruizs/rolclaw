@@ -1,0 +1,60 @@
+[project]
+name = "claw-enterprise-assistant"
+version = "0.1.0"
+description = "Role-based enterprise AI assistant with server-enforced permissions (OpenClaw + MCP)."
+requires-python = ">=3.13"
+license = "MIT"
+dependencies = ["assistant"]
+
+# La raíz solo agrupa los servicios; no es un paquete.
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["mcp_server"]
+
+[tool.uv.sources]
+assistant = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.5.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["mcp_server/src"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "S", "ASYNC", "SIM", "C4", "RET", "PTH", "PT", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# En tests se permite assert.
+"**/tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+files = ["mcp_server/src", "mcp_server/tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["mcp_server/tests"]
+addopts = "-ra --strict-markers --strict-config"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.coverage.run]
+source = ["assistant"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
