@@ -1,0 +1,10 @@
+# Precios unitarios antes de IVA.
+moneda: MXN
+productos:
+  - { id: LAP-001, nombre: Laptop Cardinal Pro 14, categoria: laptops, precio: 15000 }
+  - { id: DES-001, nombre: Desktop Cardinal Office, categoria: escritorio, precio: 12800 }
+  - { id: MON-001, nombre: Monitor 27 pulgadas QHD, categoria: monitores, precio: 4200 }
+  - { id: MON-002, nombre: Monitor 24 pulgadas FHD, categoria: monitores, precio: 2600 }
+  - { id: DOC-001, nombre: Docking station USB-C, categoria: accesorios, precio: 2100 }
+  - { id: KIT-001, nombre: Kit de teclado y mouse inalámbricos, categoria: accesorios, precio: 650 }
+  - { id: SRV-001, nombre: Servidor torre Cardinal T1, categoria: servidores, precio: 48000 }

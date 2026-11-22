@@ -1,0 +1,19 @@
+# Los tokens de cada rol van en .env (ROLE_TOKEN_<ROL>), no aquí.
+roles:
+  ventas:
+    nombre: Ventas
+    persona: { nombre: Pedro Ramírez, empleado_id: E-101 }
+    herramientas: [buscar_conocimiento, listar_flujos, ver_flujo, iniciar_solicitud, mis_solicitudes, calcular]
+  rh:
+    nombre: Recursos Humanos
+    persona: { nombre: Ana Torres, empleado_id: E-201 }
+    herramientas: [buscar_conocimiento, listar_flujos, ver_flujo, iniciar_solicitud, mis_solicitudes, calcular]
+  empleado:
+    nombre: Empleado
+    persona: { nombre: Juan Méndez, empleado_id: E-301 }
+    herramientas: [buscar_conocimiento, listar_flujos, ver_flujo, iniciar_solicitud, mis_solicitudes, calcular]
+  gerente:
+    nombre: Gerencia
+    persona: { nombre: Laura Vega, empleado_id: E-001 }
+    herramientas: [buscar_conocimiento, listar_flujos, ver_flujo, mis_solicitudes, calcular,
+                   pendientes_de_aprobar, aprobar, rechazar]
