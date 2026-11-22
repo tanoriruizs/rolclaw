@@ -11,6 +11,9 @@ solicitan, conforme a la Ley Federal del Trabajo (reforma de 2023).
 
 ## 2. Días por antigüedad
 
+Los días de vacaciones que te tocan dependen de tus años de servicio (antigüedad) en la empresa.
+Por ejemplo, con 1 año te corresponden 12 días y con 3 años, 16 días.
+
 | Años de servicio | Días de vacaciones |
 |---|---|
 | 1 | 12 |
