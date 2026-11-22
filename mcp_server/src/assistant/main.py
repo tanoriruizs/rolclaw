@@ -3,26 +3,47 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from redis.asyncio import Redis
 
 from assistant import __version__
 from assistant.config import Settings
-from assistant.container import build_services
+from assistant.container import Services, build_services
 from assistant.errors import AssistantError, AuthenticationError
 from assistant.logs import RequestContextMiddleware, configure_logging
+from assistant.rag import Embedder, ensure_index
 from assistant.rest import api_router, health_router
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    services: Services = app.state.services
+    await ensure_index(services.company, services.embedder, services.store)
+    logger.info("servidor listo")
+    yield
+    await services.redis.aclose()
+
+
+def create_app(
+    settings: Settings | None = None,
+    *,
+    redis: Redis | None = None,
+    embedder: Embedder | None = None,
+) -> FastAPI:
     settings = settings or Settings.from_environ()
     configure_logging(settings.log_level)
 
-    app = FastAPI(title="Grupo Cardinal - Asistente por roles", version=__version__)
-    app.state.services = build_services(settings)
+    app = FastAPI(
+        title="Grupo Cardinal - Asistente por roles", version=__version__, lifespan=lifespan
+    )
+    app.state.services = build_services(settings, redis=redis, embedder=embedder)
     app.add_middleware(RequestContextMiddleware)
     app.include_router(health_router)
     app.include_router(api_router)
@@ -32,6 +53,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         headers = {"WWW-Authenticate": "Bearer"} if isinstance(exc, AuthenticationError) else None
         return JSONResponse({"error": exc.message}, status_code=exc.status_code, headers=headers)
 
+    @app.exception_handler(RequestValidationError)
+    async def handle_validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        problems = "; ".join(
+            f"{'.'.join(str(p) for p in error['loc'][1:])}: {error['msg']}"
+            for error in exc.errors()
+        )
+        return JSONResponse({"error": f"Datos inválidos: {problems}"}, status_code=422)
+
     @app.exception_handler(Exception)
     async def handle_unexpected_error(_: Request, exc: Exception) -> JSONResponse:
         # El traceback queda en el log del servidor; el cliente solo recibe un mensaje útil.
@@ -40,5 +69,4 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             {"error": "Error interno. Intenta de nuevo más tarde."}, status_code=500
         )
 
-    logger.info("servidor listo", extra={"fields": {"roles": sorted(settings.role_tokens)}})
     return app

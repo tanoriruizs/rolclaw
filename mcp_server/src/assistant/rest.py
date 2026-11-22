@@ -5,14 +5,18 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from redis.exceptions import RedisError
 
 from assistant.auth import Caller
 from assistant.company import Tool
 from assistant.container import Services
 from assistant.errors import AuthenticationError
 from assistant.flows import FlowDetail, FlowSummary
+from assistant.rag import Fragment
+from assistant.tools.buscar_conocimiento import buscar_conocimiento
 from assistant.tools.listar_flujos import listar_flujos
 from assistant.tools.ver_flujo import ver_flujo
 
@@ -47,6 +51,11 @@ class Me(BaseModel):
     herramientas: list[Tool]
 
 
+class SearchRequest(BaseModel):
+    pregunta: str
+    top_k: int = 4
+
+
 health_router = APIRouter(tags=["salud"])
 api_router = APIRouter(prefix="/api/v1", tags=["api"])
 
@@ -57,8 +66,15 @@ async def health() -> dict[str, str]:
 
 
 @health_router.get("/ready")
-async def ready() -> dict[str, str]:
-    return {"status": "ready"}
+async def ready(services: ServicesDep) -> JSONResponse:
+    """Listo solo si Redis responde y el índice de documentos tiene contenido."""
+    try:
+        fragments = await services.store.count()
+    except RedisError:
+        fragments = 0
+    if fragments == 0:
+        return JSONResponse({"status": "not_ready"}, status_code=503)
+    return JSONResponse({"status": "ready", "fragmentos": fragments})
 
 
 @api_router.get("/me")
@@ -79,3 +95,10 @@ async def get_flows(services: ServicesDep, caller: CallerDep) -> list[FlowSummar
 @api_router.get("/flujos/{flujo_id}")
 async def get_flow(flujo_id: str, services: ServicesDep, caller: CallerDep) -> FlowDetail:
     return await ver_flujo(services, caller, flujo_id)
+
+
+@api_router.post("/conocimiento/buscar")
+async def search_knowledge(
+    body: SearchRequest, services: ServicesDep, caller: CallerDep
+) -> list[Fragment]:
+    return await buscar_conocimiento(services, caller, body.pregunta, body.top_k)

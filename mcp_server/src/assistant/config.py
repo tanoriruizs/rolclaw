@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     empresa_dir: Path = Path("empresa")
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     role_tokens: dict[str, SecretStr] = Field(default_factory=dict)
+    redis_url: str = "redis://localhost:6379/0"
+    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embedding_cache_dir: Path | None = None
 
     @classmethod
     def from_environ(cls, environ: Mapping[str, str] | None = None) -> Settings:

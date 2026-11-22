@@ -16,7 +16,10 @@ AuthHeaders = Callable[[str], dict[str, str]]
 
 def test_health_and_ready_do_not_need_a_token(client: TestClient) -> None:
     assert client.get("/health").json() == {"status": "ok"}
-    assert client.get("/ready").json() == {"status": "ready"}
+    ready = client.get("/ready")
+    assert ready.status_code == 200
+    assert ready.json()["status"] == "ready"
+    assert ready.json()["fragmentos"] > 0
 
 
 @pytest.mark.parametrize(
@@ -77,13 +80,16 @@ def test_flow_of_another_role_looks_like_it_does_not_exist(
 
 
 def test_tool_not_allowed_for_role_returns_403(
-    empresa_copy: Path, role_tokens: dict[str, SecretStr], auth_headers: AuthHeaders
+    empresa_copy: Path,
+    role_tokens: dict[str, SecretStr],
+    auth_headers: AuthHeaders,
+    make_app: Callable[[Settings], FastAPI],
 ) -> None:
     roles_file = empresa_copy / "roles.yaml"
     data = yaml.safe_load(roles_file.read_text(encoding="utf-8"))
     data["roles"]["rh"]["herramientas"].remove("listar_flujos")
     roles_file.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
-    app = create_app(Settings(empresa_dir=empresa_copy, role_tokens=role_tokens))
+    app = make_app(Settings(empresa_dir=empresa_copy, role_tokens=role_tokens))
 
     with TestClient(app) as client:
         response = client.get("/api/v1/flujos", headers=auth_headers("rh"))

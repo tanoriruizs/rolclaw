@@ -29,3 +29,7 @@ class PermissionDeniedError(AssistantError):
 
 class NotFoundError(AssistantError):
     status_code = 404
+
+
+class InvalidInputError(AssistantError):
+    status_code = 422

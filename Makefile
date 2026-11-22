@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 UV := uv
 
-.PHONY: help setup tokens run lint format test secrets ci
+.PHONY: help setup tokens run ingest lint format test secrets ci
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -17,6 +17,9 @@ tokens: ## Genera tokens de rol y secretos locales en .env
 run: ## Levanta el servidor local en http://127.0.0.1:8000 (usa .env)
 	$(UV) run --env-file .env uvicorn assistant.main:create_app --factory --reload \
 		--host 127.0.0.1 --port 8000
+
+ingest: ## Re-indexa los documentos de empresa/ en Redis
+	$(UV) run --env-file .env python -m assistant.rag.ingest
 
 lint: ## ruff (lint + formato) y mypy --strict
 	$(UV) run ruff check .

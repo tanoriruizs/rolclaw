@@ -18,6 +18,7 @@ assistant = { workspace = true }
 
 [dependency-groups]
 dev = [
+    "fakeredis>=2.40.0",
     "httpx2>=2.16.2",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",
@@ -62,3 +63,4 @@ branch = true
 fail_under = 80
 show_missing = true
 skip_covered = true
+exclude_also = ['if __name__ == "__main__":']
