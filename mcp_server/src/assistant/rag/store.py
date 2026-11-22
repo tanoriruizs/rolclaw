@@ -31,7 +31,9 @@ class VectorStore:
     def _key(self, *parts: str) -> str:
         return ":".join((self._prefix, *parts))
 
-    async def replace_all(self, chunks: Sequence[Chunk], vectors: Vectors, model: str) -> None:
+    async def replace_all(
+        self, chunks: Sequence[Chunk], vectors: Vectors, model: str, fingerprint: str
+    ) -> None:
         """Reemplaza el índice completo en una sola transacción (nadie ve un índice a medias)."""
         old_ids = await self._redis.smembers(self._key("ids"))
         old_roles = await self._redis.smembers(self._key("roles"))
@@ -59,15 +61,24 @@ class VectorStore:
                 pipe.sadd(self._key("role", role), chunk.id)
         if roles:
             pipe.sadd(self._key("roles"), *roles)
-        pipe.hset(self._key("meta"), mapping={"model": model, "count": len(chunks)})
+        pipe.hset(
+            self._key("meta"),
+            mapping={"model": model, "fingerprint": fingerprint, "count": len(chunks)},
+        )
         await pipe.execute()
 
     async def count(self) -> int:
         return int(await self._redis.scard(self._key("ids")))
 
     async def indexed_model(self) -> str | None:
-        model = await self._redis.hget(self._key("meta"), "model")
-        return _text(model) if model is not None else None
+        return await self._meta("model")
+
+    async def indexed_fingerprint(self) -> str | None:
+        return await self._meta("fingerprint")
+
+    async def _meta(self, field: str) -> str | None:
+        value = await self._redis.hget(self._key("meta"), field)
+        return _text(value) if value is not None else None
 
     async def chunks_for_role(self, role: str) -> list[StoredChunk]:
         ids = sorted(_text(m) for m in await self._redis.smembers(self._key("role", role)))

@@ -94,15 +94,37 @@ async def test_ingest_without_documents_leaves_an_empty_index(
 async def test_ensure_index_only_reindexes_when_needed(
     company: Company, embedder: HashingEmbedder, store: VectorStore
 ) -> None:
-    await ensure_index(company, embedder, store)
-    await ensure_index(company, embedder, store)
+    assert await ensure_index(company, embedder, store) is True
+    assert await ensure_index(company, embedder, store) is False
     assert embedder.calls == 1
 
     other_model = HashingEmbedder()
     other_model.model_name = "otro-modelo"
-    await ensure_index(company, other_model, store)
-    assert other_model.calls == 1
+    assert await ensure_index(company, other_model, store) is True
     assert await store.indexed_model() == "otro-modelo"
+
+
+async def test_changing_a_document_role_reindexes_on_restart(
+    company: Company, embedder: HashingEmbedder, store: VectorStore
+) -> None:
+    await ensure_index(company, embedder, store)
+    assert await _titles_for(store, "ventas") >= {"Política Comercial"}
+
+    # Quitar un rol en el front matter debe surtir efecto al reiniciar, sin `make ingest`.
+    documents = tuple(
+        d.model_copy(update={"roles": frozenset({"gerente"})})
+        if d.archivo == "politica_comercial.md"
+        else d
+        for d in company.documentos
+    )
+    changed = company.model_copy(update={"documentos": documents})
+
+    assert await ensure_index(changed, embedder, store) is True
+    assert "Política Comercial" not in await _titles_for(store, "ventas")
+
+
+async def _titles_for(store: VectorStore, role: str) -> set[str]:
+    return {chunk.titulo for chunk in await store.chunks_for_role(role)}
 
 
 def replace_documents(company: Company, keep: str) -> Company:
