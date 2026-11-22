@@ -46,6 +46,13 @@ class TokenAuthenticator:
                 found = caller
         return found
 
+    def authenticate_header(self, authorization: str | None) -> Caller | None:
+        """Recibe el header Authorization completo ("Bearer <token>")."""
+        scheme, _, token = (authorization or "").partition(" ")
+        if scheme.lower() != "bearer" or not token:
+            return None
+        return self.authenticate(token.strip())
+
 
 def _validate_tokens(tokens: Mapping[str, SecretStr], company: Company) -> None:
     def env_names(roles: set[str]) -> str:

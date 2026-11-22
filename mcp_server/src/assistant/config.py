@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     embedding_cache_dir: Path | None = None
+    # Valores válidos del header Host en /mcp (protección contra DNS rebinding).
+    mcp_allowed_hosts: list[str] = ["127.0.0.1:*", "localhost:*", "mcp-server:*"]
 
     @classmethod
     def from_environ(cls, environ: Mapping[str, str] | None = None) -> Settings:

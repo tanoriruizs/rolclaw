@@ -10,12 +10,14 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from redis.asyncio import Redis
+from starlette.routing import Route
 
 from assistant import __version__
 from assistant.config import Settings
 from assistant.container import Services, build_services
 from assistant.errors import AssistantError, AuthenticationError
 from assistant.logs import RequestContextMiddleware, configure_logging
+from assistant.mcp_app import build_mcp_server, mcp_endpoint
 from assistant.rag import Embedder, ensure_index
 from assistant.rest import api_router, health_router
 
@@ -26,8 +28,9 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     services: Services = app.state.services
     await ensure_index(services.company, services.embedder, services.store)
-    logger.info("servidor listo")
-    yield
+    async with app.state.mcp.session_manager.run():
+        logger.info("servidor listo")
+        yield
     await services.redis.aclose()
 
 
@@ -43,10 +46,20 @@ def create_app(
     app = FastAPI(
         title="Grupo Cardinal - Asistente por roles", version=__version__, lifespan=lifespan
     )
-    app.state.services = build_services(settings, redis=redis, embedder=embedder)
+    services = build_services(settings, redis=redis, embedder=embedder)
+    app.state.services = services
+    app.state.mcp = build_mcp_server(services, settings)
     app.add_middleware(RequestContextMiddleware)
     app.include_router(health_router)
     app.include_router(api_router)
+    app.router.routes.append(
+        Route(
+            "/mcp",
+            mcp_endpoint(app.state.mcp, services.auth),
+            methods=["GET", "POST", "DELETE"],
+            include_in_schema=False,
+        )
+    )
 
     @app.exception_handler(AssistantError)
     async def handle_assistant_error(_: Request, exc: AssistantError) -> JSONResponse:
