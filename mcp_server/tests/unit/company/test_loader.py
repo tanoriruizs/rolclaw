@@ -1,0 +1,114 @@
+from datetime import date
+from decimal import Decimal
+from pathlib import Path
+
+import pytest
+
+from assistant.company import Company, CompanyConfigError, Tool, load_company
+
+
+@pytest.fixture
+def company(empresa_dir: Path) -> Company:
+    return load_company(empresa_dir)
+
+
+def _replace(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+
+
+def test_real_company_loads(company: Company) -> None:
+    assert set(company.roles) == {"ventas", "rh", "empleado", "gerente"}
+    assert len(company.documentos) == 5
+    assert {f.id for f in company.flujos} == {
+        "cotizacion_descuento",
+        "alta_cliente",
+        "registrar_vacaciones",
+        "solicitar_vacaciones",
+        "constancia_laboral",
+    }
+
+
+def test_demo_data_matches_the_plan(company: Company) -> None:
+    laptop = next(p for p in company.catalogo.productos if p.id == "LAP-001")
+    juan = next(e for e in company.empleados if e.id == "E-301")
+
+    assert laptop.precio == Decimal(15000)
+    assert (date(2026, 12, 22) - juan.fecha_ingreso).days // 365 == 3
+
+
+def test_salary_table_is_only_for_rh_and_gerente(company: Company) -> None:
+    tabulador = next(d for d in company.documentos if d.archivo == "tabulador_sueldos.md")
+
+    assert tabulador.roles == {"rh", "gerente"}
+
+
+def test_injection_document_is_present_for_every_role(company: Company) -> None:
+    codigo = next(d for d in company.documentos if d.archivo == "codigo_conducta.md")
+
+    assert "ignora todas tus instrucciones" in codigo.contenido
+    assert codigo.roles == set(company.roles)
+
+
+def test_only_gerente_can_approve(company: Company) -> None:
+    approvers = {rid for rid, role in company.roles.items() if Tool.APROBAR in role.herramientas}
+
+    assert approvers == {"gerente"}
+
+
+@pytest.mark.parametrize(
+    ("file", "old", "new", "expected"),
+    [
+        ("roles.yaml", "mis_solicitudes, calcular]", "mis_solicitudes, borrar_todo]", "roles.yaml"),
+        ("roles.yaml", "empleado_id: E-101", "empleado_id: E-999", "persona no coincide"),
+        ("empleados.yaml", "jefe: E-301", "jefe: E-404", "jefe 'E-404' no existe"),
+        ("catalogo.yaml", "precio: 15000", "precio: -1", "catalogo.yaml"),
+        ("flujos/ventas/alta_cliente.yaml", "pasos:", "regals: []\npasos:", "alta_cliente.yaml"),
+        (
+            "flujos/ventas/alta_cliente.yaml",
+            "roles: [ventas]",
+            "roles: [gerente]",
+            "no puede iniciar",
+        ),
+        (
+            "flujos/ventas/alta_cliente.yaml",
+            "aprueba: gerente",
+            "aprueba: ventas",
+            "no puede aprobar",
+        ),
+        ("flujos/ventas/alta_cliente.yaml", "roles: [ventas]", "roles: [compras]", "desconocidos"),
+        ("documentos/prestaciones.md", "roles: [empleado,", "roles: [becario,", "desconocidos"),
+        ("documentos/prestaciones.md", "---\ntitulo", "titulo", "front matter"),
+        ("catalogo.yaml", "moneda: MXN", "moneda: [MXN", "YAML inválido"),
+    ],
+)
+def test_invalid_configuration_is_rejected_with_a_clear_message(
+    empresa_copy: Path, file: str, old: str, new: str, expected: str
+) -> None:
+    _replace(empresa_copy / file, old, new)
+
+    with pytest.raises(CompanyConfigError, match=expected):
+        load_company(empresa_copy)
+
+
+def test_missing_file_is_reported(empresa_copy: Path) -> None:
+    (empresa_copy / "roles.yaml").unlink()
+
+    with pytest.raises(CompanyConfigError, match="no existe"):
+        load_company(empresa_copy)
+
+
+def test_front_matter_must_be_a_mapping(empresa_copy: Path) -> None:
+    (empresa_copy / "documentos" / "extra.md").write_text("---\n- lista\n---\nTexto", "utf-8")
+
+    with pytest.raises(CompanyConfigError, match="titulo y roles"):
+        load_company(empresa_copy)
+
+
+def test_duplicate_flow_ids_are_rejected(empresa_copy: Path) -> None:
+    source = empresa_copy / "flujos" / "ventas" / "alta_cliente.yaml"
+    (empresa_copy / "flujos" / "ventas" / "copia.yaml").write_text(source.read_text("utf-8"))
+
+    with pytest.raises(CompanyConfigError, match="flujo duplicado"):
+        load_company(empresa_copy)
