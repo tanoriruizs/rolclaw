@@ -1,5 +1,14 @@
-"""Flujos de trabajo: consulta (catálogo) y, más adelante, el motor de reglas."""
+"""Flujos de trabajo: consulta por rol (catálogo) y motor de reglas."""
 
 from assistant.flows.catalog import FlowCatalog, FlowDetail, FlowSummary
+from assistant.flows.engine import Decision, FieldValue, Outcome, evaluate
 
-__all__ = ["FlowCatalog", "FlowDetail", "FlowSummary"]
+__all__ = [
+    "Decision",
+    "FieldValue",
+    "FlowCatalog",
+    "FlowDetail",
+    "FlowSummary",
+    "Outcome",
+    "evaluate",
+]
