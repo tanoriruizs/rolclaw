@@ -29,23 +29,25 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["mcp_server/src"]
+src = ["mcp_server/src", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "S", "ASYNC", "SIM", "C4", "RET", "PTH", "PT", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
-# En tests se permite assert.
-"**/tests/**" = ["S101"]
+# En tests se permiten assert y secretos de prueba.
+"**/tests/**" = ["S101", "S105", "S106"]
 
 [tool.mypy]
 python_version = "3.13"
 strict = true
 warn_unreachable = true
-files = ["mcp_server/src", "mcp_server/tests"]
+files = ["mcp_server/src", "mcp_server/tests", "scripts"]
+mypy_path = "scripts"
 
 [tool.pytest.ini_options]
-testpaths = ["mcp_server/tests"]
+testpaths = ["mcp_server/tests", "scripts/tests"]
+pythonpath = ["scripts"]
 addopts = "-ra --strict-markers --strict-config"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
