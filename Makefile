@@ -2,18 +2,19 @@
 UV := uv
 COMPOSE := docker compose
 
-.PHONY: help setup tokens up pairing down logs ps ingest sandbox-check run lint format test secrets ci
+.PHONY: help setup tokens up pairing demo-reset down logs ps ingest sandbox-check run \
+	lint format test secrets ci
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
-		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Instala dependencias y los hooks de pre-commit
+setup: ## Instala dependencias y los hooks de pre-commit (para desarrollar)
 	$(UV) sync --all-packages
 	$(UV) run pre-commit install
 
-tokens: ## Genera tokens de rol y secretos locales en .env
-	$(UV) run python scripts/gen_tokens.py
+tokens: ## Genera tokens de rol y secretos locales en .env (solo necesita python3)
+	python3 scripts/gen_tokens.py
 
 up: ## Construye y levanta los servicios; espera a que estén sanos
 	$(COMPOSE) up -d --build --wait redis servicenow-mock sandbox mcp-server
@@ -23,6 +24,13 @@ up: ## Construye y levanta los servicios; espera a que estén sanos
 pairing: ## Aprueba el pairing de Telegram solo para TELEGRAM_OWNER_ID (ver .env)
 	@$(COMPOSE) exec -T openclaw sh /config-src/approve_pairing.sh \
 		"$$(grep -E '^TELEGRAM_OWNER_ID=' .env | cut -d= -f2)"
+
+demo-reset: ## Borra solicitudes y auditoría para grabar la demo desde REQ0010001
+	@# Claves: sn:sc_request* (ServiceNow simulado, Redis db 1) y audit:events (db 0).
+	@$(COMPOSE) exec -T redis sh -c \
+		"redis-cli -n 1 --scan --pattern 'sn:sc_request*' | xargs -r redis-cli -n 1 del; \
+		redis-cli -n 0 del audit:events" >/dev/null
+	@echo "Demo en blanco: la siguiente solicitud será REQ0010001."
 
 down: ## Detiene los servicios (los datos de Redis se conservan)
 	$(COMPOSE) down
