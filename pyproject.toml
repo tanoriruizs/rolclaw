@@ -4,17 +4,18 @@ version = "0.1.0"
 description = "Role-based enterprise AI assistant with server-enforced permissions (OpenClaw + MCP)."
 requires-python = ">=3.13"
 license = "MIT"
-dependencies = ["assistant", "servicenow-mock"]
+dependencies = ["assistant", "sandbox-runner", "servicenow-mock"]
 
 # La raíz solo agrupa los servicios; no es un paquete.
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["mcp_server", "servicenow_mock"]
+members = ["mcp_server", "sandbox", "servicenow_mock"]
 
 [tool.uv.sources]
 assistant = { workspace = true }
+sandbox-runner = { workspace = true }
 servicenow-mock = { workspace = true }
 
 [dependency-groups]
@@ -33,7 +34,7 @@ dev = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-src = ["mcp_server/src", "servicenow_mock/src", "scripts"]
+src = ["mcp_server/src", "sandbox/src", "servicenow_mock/src", "scripts"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "S", "ASYNC", "SIM", "C4", "RET", "PTH", "PT", "RUF"]
@@ -49,6 +50,8 @@ warn_unreachable = true
 files = [
     "mcp_server/src",
     "mcp_server/tests",
+    "sandbox/src",
+    "sandbox/tests",
     "servicenow_mock/src",
     "servicenow_mock/tests",
     "scripts",
@@ -56,14 +59,16 @@ files = [
 mypy_path = "scripts"
 
 [tool.pytest.ini_options]
-testpaths = ["mcp_server/tests", "servicenow_mock/tests", "scripts/tests"]
+testpaths = ["mcp_server/tests", "sandbox/tests", "servicenow_mock/tests", "scripts/tests"]
 pythonpath = ["scripts"]
 addopts = "-ra --strict-markers --strict-config"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
-source = ["assistant", "servicenow_mock"]
+source = ["assistant", "sandbox_runner", "servicenow_mock"]
+# child.py corre en un proceso aparte con límites; se prueba por su comportamiento.
+omit = ["*/sandbox_runner/child.py"]
 branch = true
 
 [tool.coverage.report]

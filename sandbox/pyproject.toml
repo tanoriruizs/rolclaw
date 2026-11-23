@@ -1,0 +1,13 @@
+[project]
+name = "sandbox-runner"
+version = "0.1.0"
+description = "Ejecuta código Python de cálculo con límites de CPU, memoria, procesos y tiempo."
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.165.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
