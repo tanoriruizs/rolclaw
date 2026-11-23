@@ -2,11 +2,13 @@
   <img src="docs/mascota.gif" alt="Mascota del proyecto: un personaje blanco con lentes y un gafete con candado" width="170">
 </p>
 
-# Asistente empresarial por roles
+# rolclaw
+
+### Asistente empresarial por roles, sobre OpenClaw
 
 **Agentes de IA para empresas donde los permisos los decide el servidor, nunca el modelo.**
 
-[![CI](https://github.com/tanoriruizs/claw-enterprise-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/tanoriruizs/claw-enterprise-assistant/actions/workflows/ci.yml)
+[![CI](https://github.com/tanoriruizs/rolclaw/actions/workflows/ci.yml/badge.svg)](https://github.com/tanoriruizs/rolclaw/actions/workflows/ci.yml)
 ![Cobertura](https://img.shields.io/badge/cobertura-%E2%89%A580%25%20en%20CI-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.13-blue)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-yellow)](LICENSE)
@@ -78,8 +80,8 @@ Más detalle en [docs/arquitectura.md](docs/arquitectura.md).
 de Telegram (ver abajo).
 
 ```bash
-git clone https://github.com/tanoriruizs/claw-enterprise-assistant.git
-cd claw-enterprise-assistant
+git clone https://github.com/tanoriruizs/rolclaw.git
+cd rolclaw
 cp .env.example .env      # pon tu ANTHROPIC_API_KEY y los 4 tokens de los bots
 make tokens               # genera los secretos internos (tokens de rol, OAuth, gateway)
 make up                   # construye y levanta todo; espera a que esté sano

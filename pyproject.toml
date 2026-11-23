@@ -1,5 +1,5 @@
 [project]
-name = "claw-enterprise-assistant"
+name = "rolclaw"
 version = "0.1.0"
 description = "Role-based enterprise AI assistant with server-enforced permissions (OpenClaw + MCP)."
 requires-python = ">=3.13"
