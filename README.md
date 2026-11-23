@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/mascota.png" alt="Mascota del proyecto: un personaje blanco con lentes y un gafete con candado" width="170">
+  <img src="docs/mascota.gif" alt="Mascota del proyecto: un personaje blanco con lentes y un gafete con candado" width="170">
 </p>
 
 # Asistente empresarial por roles
@@ -40,7 +40,8 @@ Aquí eso no funciona, porque el modelo **nunca recibe** lo que el rol no puede 
 - 📚 **RAG filtrado por rol.** Busca en las políticas de la empresa por significado y cita la
   sección. Filtra por rol **antes** de buscar: lo prohibido ni siquiera entra al ranking.
 - 🧾 **Trámites con reglas.** Flujos declarativos en YAML ("descuento mayor a 10 % requiere
-  aprobación de gerencia") que el servidor hace cumplir. Las solicitudes viven en ServiceNow.
+  aprobación de gerencia") que el servidor hace cumplir. Las solicitudes se registran en un
+  ServiceNow simulado, compatible con una instancia real.
 - 🧮 **Cálculos en un sandbox.** El agente nunca calcula de memoria: ejecuta Python en un
   contenedor sin red, de solo lectura y con límites de CPU, memoria y procesos.
 - 🕵️ **Auditoría.** Cada uso de una herramienta queda registrado (quién, qué, resultado).
@@ -106,8 +107,9 @@ Un token de bot solo puede usarse en un gateway a la vez: usa bots nuevos para e
 ### Usar otro modelo
 
 El modelo se elige con `OPENCLAW_MODEL` en `.env` (por defecto
-`anthropic/claude-sonnet-5-5`). Cambiarlo, por ejemplo a OpenAI o Azure OpenAI, no requiere
-tocar código.
+`anthropic/claude-sonnet-5-5`). Para otro proveedor, como OpenAI o Azure OpenAI, cambia esa
+variable y pasa su API key al servicio `openclaw` en `docker-compose.yml`. El servidor MCP no
+cambia: no depende del modelo.
 
 ## Adáptalo a tu empresa
 
@@ -163,7 +165,7 @@ documentación interactiva en `http://127.0.0.1:8000/docs`).
 | *Prompt injection* en documentos | Permisos independientes del modelo; un test lo prueba |
 | Código malicioso en cálculos | Sandbox sin red, solo lectura, con límites y `tini` como PID 1 |
 | Fuga de secretos | `.env` fuera de git, gitleaks en pre-commit y CI, logs sin tokens |
-| Exposición | Puertos solo en `127.0.0.1`; *pairing* en Telegram; `openclaw security audit` sin hallazgos |
+| Exposición | Puertos solo en `127.0.0.1`; *pairing* en Telegram; `openclaw security audit` sin hallazgos críticos ni advertencias |
 
 Modelo de amenazas completo y limitaciones conocidas: [SECURITY.md](SECURITY.md).
 
