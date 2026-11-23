@@ -3,15 +3,16 @@ from assistant.company import Tool
 from assistant.container import Services
 from assistant.errors import InvalidInputError
 from assistant.rag import Fragment
+from assistant.tools.base import tool
 
 MAX_TOP_K = 10
 MAX_QUESTION_CHARS = 500
 
 
+@tool(Tool.BUSCAR_CONOCIMIENTO)
 async def buscar_conocimiento(
     services: Services, caller: Caller, pregunta: str, top_k: int = 4
 ) -> list[Fragment]:
-    services.permissions.ensure(caller.role, Tool.BUSCAR_CONOCIMIENTO)
     if not pregunta.strip() or len(pregunta) > MAX_QUESTION_CHARS:
         raise InvalidInputError(
             f"La pregunta debe tener entre 1 y {MAX_QUESTION_CHARS} caracteres."

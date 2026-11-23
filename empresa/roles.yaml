@@ -16,4 +16,4 @@ roles:
     nombre: Gerencia
     persona: { nombre: Laura Vega, empleado_id: E-001 }
     herramientas: [buscar_conocimiento, listar_flujos, ver_flujo, mis_solicitudes, calcular,
-                   pendientes_de_aprobar, aprobar, rechazar]
+                   pendientes_de_aprobar, aprobar, rechazar, ver_auditoria]

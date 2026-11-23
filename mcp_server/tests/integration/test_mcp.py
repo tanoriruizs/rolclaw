@@ -20,7 +20,8 @@ from assistant.config import Settings
 from assistant.mcp_app import _call
 
 BASE_URL = "http://127.0.0.1:8000"
-NOT_YET_IMPLEMENTED = {"calcular"}  # llega en la Fase 3 (sandbox)
+# calcular llega en la Fase 3; ver_auditoria es solo REST.
+NOT_IN_MCP = {"calcular", "ver_auditoria"}
 
 
 @asynccontextmanager
@@ -63,7 +64,7 @@ async def test_each_role_sees_the_implemented_tools(app: FastAPI, role: str) -> 
     async with mcp_session(app, role) as client:
         tools = await client.list_tools()
 
-    allowed = app.state.services.permissions.tools_for(role) - NOT_YET_IMPLEMENTED
+    allowed = app.state.services.permissions.tools_for(role) - NOT_IN_MCP
     assert {tool.name for tool in tools.tools} == allowed
     assert all(tool.description for tool in tools.tools)
 

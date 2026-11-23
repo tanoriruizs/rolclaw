@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from redis.exceptions import RedisError
 
+from assistant.audit import AuditEvent
 from assistant.auth import Caller
 from assistant.company import Tool
 from assistant.container import Services
@@ -24,6 +25,7 @@ from assistant.tools.listar_flujos import listar_flujos
 from assistant.tools.mis_solicitudes import mis_solicitudes
 from assistant.tools.pendientes_de_aprobar import pendientes_de_aprobar
 from assistant.tools.rechazar import rechazar
+from assistant.tools.ver_auditoria import ver_auditoria
 from assistant.tools.ver_flujo import ver_flujo
 
 _bearer = HTTPBearer(auto_error=False)
@@ -117,6 +119,11 @@ async def search_knowledge(
     body: SearchRequest, services: ServicesDep, caller: CallerDep
 ) -> list[Fragment]:
     return await buscar_conocimiento(services, caller, body.pregunta, body.top_k)
+
+
+@api_router.get("/auditoria")
+async def audit_log(services: ServicesDep, caller: CallerDep, limite: int = 50) -> list[AuditEvent]:
+    return await ver_auditoria(services, caller, limite)
 
 
 @api_router.post("/solicitudes", status_code=201)

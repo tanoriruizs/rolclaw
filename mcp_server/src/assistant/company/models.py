@@ -23,6 +23,7 @@ class Tool(StrEnum):
     PENDIENTES_DE_APROBAR = "pendientes_de_aprobar"
     APROBAR = "aprobar"
     RECHAZAR = "rechazar"
+    VER_AUDITORIA = "ver_auditoria"
 
 
 class FieldType(StrEnum):

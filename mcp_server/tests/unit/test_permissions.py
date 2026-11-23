@@ -16,7 +16,8 @@ EXPECTED = {
     "ventas": COMMON | {Tool.INICIAR_SOLICITUD},
     "rh": COMMON | {Tool.INICIAR_SOLICITUD},
     "empleado": COMMON | {Tool.INICIAR_SOLICITUD},
-    "gerente": COMMON | {Tool.PENDIENTES_DE_APROBAR, Tool.APROBAR, Tool.RECHAZAR},
+    "gerente": COMMON
+    | {Tool.PENDIENTES_DE_APROBAR, Tool.APROBAR, Tool.RECHAZAR, Tool.VER_AUDITORIA},
 }
 
 

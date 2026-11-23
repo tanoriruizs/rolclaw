@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import httpx2
 from redis.asyncio import Redis
 
+from assistant.audit import AuditLog
 from assistant.auth import TokenAuthenticator
 from assistant.company import Company, load_company
 from assistant.config import Settings
@@ -30,6 +31,7 @@ class Services:
     knowledge: KnowledgeSearch
     servicenow: ServiceNowClient
     requests: RequestsService
+    audit: AuditLog
 
 
 def build_services(
@@ -57,6 +59,7 @@ def build_services(
         knowledge=KnowledgeSearch(embedder, store),
         servicenow=servicenow,
         requests=RequestsService(company, servicenow),
+        audit=AuditLog(redis),
     )
 
 
