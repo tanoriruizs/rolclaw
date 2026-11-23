@@ -2,26 +2,23 @@
   <img src="docs/mascota.gif" alt="Mascota del proyecto: un personaje blanco con lentes y un gafete con candado" width="170">
 </p>
 
-# rolclaw
+<h1 align="center">rolclaw</h1>
 
-### Asistente empresarial por roles, sobre OpenClaw
+<p align="center">
+  <b>Agentes de IA para empresas donde los permisos los decide el servidor, nunca el modelo.</b>
+</p>
 
-**Agentes de IA para empresas donde los permisos los decide el servidor, nunca el modelo.**
-
-[![CI](https://github.com/tanoriruizs/rolclaw/actions/workflows/ci.yml/badge.svg)](https://github.com/tanoriruizs/rolclaw/actions/workflows/ci.yml)
-![Cobertura](https://img.shields.io/badge/cobertura-%E2%89%A580%25%20en%20CI-brightgreen)
-![Python](https://img.shields.io/badge/python-3.13-blue)
-[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-yellow)](LICENSE)
+<p align="center">
+  <a href="https://github.com/tanoriruizs/rolclaw/actions/workflows/ci.yml"><img src="https://github.com/tanoriruizs/rolclaw/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/cobertura-%E2%89%A580%25%20en%20CI-brightgreen" alt="Cobertura de al menos 80 % en CI">
+  <img src="https://img.shields.io/badge/python-3.13-blue" alt="Python 3.13">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-yellow" alt="Licencia MIT"></a>
+</p>
 
 Cada empleado habla por Telegram con un agente de su área (ventas, RH, empleado, gerencia).
 El agente consulta políticas, cotiza, hace cálculos y crea solicitudes que otro rol aprueba.
 La empresa se define en archivos YAML y Markdown, sin programar: **es una plantilla**.
 El ejemplo incluido es *Grupo Cardinal*, una distribuidora ficticia de equipo de cómputo.
-
-<!-- Demo: graba el GIF y guárdalo en docs/demo.gif, luego quita este comentario.
-![Demo: cotización, aprobación, vacaciones y un intento de ver sueldos](docs/demo.gif)
--->
-> 🎬 *Demo en video: próximamente.*
 
 ---
 
@@ -94,8 +91,8 @@ Pon ese id en `TELEGRAM_OWNER_ID` dentro de `.env` y apruébate:
 make pairing              # aprueba solo las solicitudes de TELEGRAM_OWNER_ID
 ```
 
-Listo: ya puedes hablar con los 4 bots. Antes de grabar una demo, `make demo-reset` borra
-las solicitudes y la auditoría.
+Listo: ya puedes hablar con los 4 bots. Para empezar de cero, `make demo-reset` borra las
+solicitudes y la auditoría.
 
 ### Crear los 4 bots de Telegram
 
