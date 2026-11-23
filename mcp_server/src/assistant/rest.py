@@ -16,8 +16,14 @@ from assistant.container import Services
 from assistant.errors import AuthenticationError
 from assistant.flows import FlowDetail, FlowSummary
 from assistant.rag import Fragment
+from assistant.requests_service import RequestSummary
+from assistant.tools.aprobar import aprobar
 from assistant.tools.buscar_conocimiento import buscar_conocimiento
+from assistant.tools.iniciar_solicitud import iniciar_solicitud
 from assistant.tools.listar_flujos import listar_flujos
+from assistant.tools.mis_solicitudes import mis_solicitudes
+from assistant.tools.pendientes_de_aprobar import pendientes_de_aprobar
+from assistant.tools.rechazar import rechazar
 from assistant.tools.ver_flujo import ver_flujo
 
 _bearer = HTTPBearer(auto_error=False)
@@ -54,6 +60,15 @@ class Me(BaseModel):
 class SearchRequest(BaseModel):
     pregunta: str
     top_k: int = 4
+
+
+class NewRequest(BaseModel):
+    flujo_id: str
+    datos: dict[str, object]
+
+
+class DecisionRequest(BaseModel):
+    comentario: str | None = None
 
 
 health_router = APIRouter(tags=["salud"])
@@ -102,3 +117,36 @@ async def search_knowledge(
     body: SearchRequest, services: ServicesDep, caller: CallerDep
 ) -> list[Fragment]:
     return await buscar_conocimiento(services, caller, body.pregunta, body.top_k)
+
+
+@api_router.post("/solicitudes", status_code=201)
+async def create_request(
+    body: NewRequest, services: ServicesDep, caller: CallerDep
+) -> RequestSummary:
+    return await iniciar_solicitud(services, caller, body.flujo_id, body.datos)
+
+
+@api_router.get("/solicitudes")
+async def my_requests(
+    services: ServicesDep, caller: CallerDep, estado: str | None = None
+) -> list[RequestSummary]:
+    return await mis_solicitudes(services, caller, estado)
+
+
+@api_router.get("/solicitudes/pendientes")
+async def pending_requests(services: ServicesDep, caller: CallerDep) -> list[RequestSummary]:
+    return await pendientes_de_aprobar(services, caller)
+
+
+@api_router.post("/solicitudes/{numero}/aprobar")
+async def approve_request(
+    numero: str, services: ServicesDep, caller: CallerDep, body: DecisionRequest | None = None
+) -> RequestSummary:
+    return await aprobar(services, caller, numero, body.comentario if body else None)
+
+
+@api_router.post("/solicitudes/{numero}/rechazar")
+async def reject_request(
+    numero: str, services: ServicesDep, caller: CallerDep, body: DecisionRequest | None = None
+) -> RequestSummary:
+    return await rechazar(services, caller, numero, body.comentario if body else None)

@@ -20,19 +20,26 @@ from assistant.config import Settings
 from assistant.mcp_app import _call
 
 BASE_URL = "http://127.0.0.1:8000"
-IMPLEMENTED = {"buscar_conocimiento", "listar_flujos", "ver_flujo"}
+NOT_YET_IMPLEMENTED = {"calcular"}  # llega en la Fase 3 (sandbox)
+
+
+@asynccontextmanager
+async def mcp_client(app: FastAPI, role: str) -> AsyncIterator[Client]:
+    """Cliente MCP de un rol sobre una app ya arrancada."""
+    headers = {"Authorization": f"Bearer {ROLE_TOKENS[role]}"}
+    transport = httpx2.ASGITransport(app=app)
+    async with (
+        httpx2.AsyncClient(transport=transport, base_url=BASE_URL, headers=headers) as http,
+        Client(streamable_http_client(f"{BASE_URL}/mcp", http_client=http)) as client,
+    ):
+        yield client
 
 
 @asynccontextmanager
 async def mcp_session(app: FastAPI, role: str) -> AsyncIterator[Client]:
-    headers = {"Authorization": f"Bearer {ROLE_TOKENS[role]}"}
-    async with app.router.lifespan_context(app):
-        transport = httpx2.ASGITransport(app=app)
-        async with (
-            httpx2.AsyncClient(transport=transport, base_url=BASE_URL, headers=headers) as http,
-            Client(streamable_http_client(f"{BASE_URL}/mcp", http_client=http)) as client,
-        ):
-            yield client
+    """Arranca la app y abre un cliente de un rol."""
+    async with app.router.lifespan_context(app), mcp_client(app, role) as client:
+        yield client
 
 
 def _text(result: CallToolResult) -> str:
@@ -56,7 +63,8 @@ async def test_each_role_sees_the_implemented_tools(app: FastAPI, role: str) -> 
     async with mcp_session(app, role) as client:
         tools = await client.list_tools()
 
-    assert {tool.name for tool in tools.tools} == IMPLEMENTED
+    allowed = app.state.services.permissions.tools_for(role) - NOT_YET_IMPLEMENTED
+    assert {tool.name for tool in tools.tools} == allowed
     assert all(tool.description for tool in tools.tools)
 
 
@@ -169,3 +177,46 @@ async def test_each_call_is_authenticated_again(app: FastAPI) -> None:
 
     with pytest.raises(ToolError, match="Token inválido o ausente"):
         await _call(services, without_token, never_called)
+
+
+async def test_demo_scene_one_over_mcp(app: FastAPI) -> None:
+    """Escena 1 de la demo: ventas pide 15 %, queda pendiente y la gerente la aprueba."""
+    datos = {"cliente": "Comercial Norte", "producto_id": "LAP-001", "cantidad": 50}
+    async with app.router.lifespan_context(app):
+        async with mcp_client(app, "ventas") as ventas:
+            created = _data_object(
+                await ventas.call_tool(
+                    "iniciar_solicitud",
+                    {"flujo_id": "cotizacion_descuento", "datos": datos | {"descuento_pct": 15}},
+                )
+            )
+            other = _data_object(
+                await ventas.call_tool(
+                    "iniciar_solicitud",
+                    {"flujo_id": "cotizacion_descuento", "datos": datos | {"descuento_pct": 20}},
+                )
+            )
+        async with mcp_client(app, "gerente") as gerente:
+            pending = _data(await gerente.call_tool("pendientes_de_aprobar", {}))
+            approved = _data_object(
+                await gerente.call_tool(
+                    "aprobar", {"numero": created["numero"], "comentario": "OK"}
+                )
+            )
+            rejected = _data_object(
+                await gerente.call_tool("rechazar", {"numero": other["numero"]})
+            )
+        async with mcp_client(app, "ventas") as ventas:
+            mine = _data(await ventas.call_tool("mis_solicitudes", {"estado": "aprobada"}))
+
+    assert created["estado"] == "pendiente_aprobacion"
+    assert [p["numero"] for p in pending] == [created["numero"], other["numero"]]
+    assert approved["estado"] == "aprobada"
+    assert approved["decidida_por"] == "Laura Vega"
+    assert rejected["estado"] == "rechazada"
+    assert [m["numero"] for m in mine] == [created["numero"]]
+
+
+def _data_object(result: CallToolResult) -> Any:
+    assert not result.is_error, _text(result)
+    return result.structured_content

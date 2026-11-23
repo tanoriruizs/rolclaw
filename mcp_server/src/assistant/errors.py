@@ -20,15 +20,21 @@ class AuthenticationError(AssistantError):
         super().__init__("Token inválido o ausente.")
 
 
-class PermissionDeniedError(AssistantError):
+class ForbiddenError(AssistantError):
     status_code = 403
 
+
+class PermissionDeniedError(ForbiddenError):
     def __init__(self) -> None:
         super().__init__("Esta acción no está disponible para tu rol.")
 
 
 class NotFoundError(AssistantError):
     status_code = 404
+
+
+class ConflictError(AssistantError):
+    status_code = 409
 
 
 class InvalidInputError(AssistantError):

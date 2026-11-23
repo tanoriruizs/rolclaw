@@ -45,12 +45,17 @@ services:
       ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:?ejecuta make tokens}
       ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:?ejecuta make tokens}
       ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:?ejecuta make tokens}
+      SERVICENOW_BASE_URL: ${SERVICENOW_BASE_URL:-http://servicenow-mock:8100}
+      SERVICENOW_CLIENT_ID: ${SERVICENOW_CLIENT_ID:-cardinal-assistant}
+      SERVICENOW_CLIENT_SECRET: ${SERVICENOW_CLIENT_SECRET:?ejecuta make tokens}
     volumes:
       - ./empresa:/app/empresa:ro
     ports:
       - "127.0.0.1:${MCP_PORT:-8000}:8000"
     depends_on:
       redis:
+        condition: service_healthy
+      servicenow-mock:
         condition: service_healthy
     read_only: true
     tmpfs:

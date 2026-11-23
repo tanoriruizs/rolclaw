@@ -20,8 +20,14 @@ from assistant.container import Services
 from assistant.errors import AssistantError, AuthenticationError
 from assistant.flows import FlowDetail, FlowSummary
 from assistant.rag import Fragment
+from assistant.requests_service import RequestSummary
+from assistant.tools.aprobar import aprobar
 from assistant.tools.buscar_conocimiento import buscar_conocimiento
+from assistant.tools.iniciar_solicitud import iniciar_solicitud
 from assistant.tools.listar_flujos import listar_flujos
+from assistant.tools.mis_solicitudes import mis_solicitudes
+from assistant.tools.pendientes_de_aprobar import pendientes_de_aprobar
+from assistant.tools.rechazar import rechazar
 from assistant.tools.ver_flujo import ver_flujo
 
 INSTRUCTIONS = (
@@ -62,6 +68,41 @@ def build_mcp_server(services: Services, settings: Settings) -> MCPServer:
         Sigue los pasos en orden y pide al usuario los datos faltantes uno a la vez.
         """
         return await _call(services, ctx, lambda c: ver_flujo(services, c, flujo_id))
+
+    @server.tool(name="iniciar_solicitud")
+    async def _iniciar_solicitud(
+        flujo_id: str, datos: dict[str, Any], ctx: Context
+    ) -> RequestSummary:
+        """Crea una solicitud de un flujo de tu rol y la registra en ServiceNow.
+
+        datos: un objeto con los datos_requeridos del flujo (usa ver_flujo para conocerlos).
+        El servidor valida los datos y aplica las reglas: la solicitud queda rechazada,
+        pendiente_aprobacion o aprobada_automaticamente. Confirma con el usuario antes de usarla.
+        """
+        return await _call(services, ctx, lambda c: iniciar_solicitud(services, c, flujo_id, datos))
+
+    @server.tool(name="mis_solicitudes")
+    async def _mis_solicitudes(ctx: Context, estado: str | None = None) -> list[RequestSummary]:
+        """Lista las solicitudes que creaste, de la más reciente a la más antigua.
+
+        estado (opcional): pendiente_aprobacion, aprobada, aprobada_automaticamente o rechazada.
+        """
+        return await _call(services, ctx, lambda c: mis_solicitudes(services, c, estado))
+
+    @server.tool(name="pendientes_de_aprobar")
+    async def _pendientes_de_aprobar(ctx: Context) -> list[RequestSummary]:
+        """Lista las solicitudes pendientes que le corresponde decidir a tu rol."""
+        return await _call(services, ctx, lambda c: pendientes_de_aprobar(services, c))
+
+    @server.tool(name="aprobar")
+    async def _aprobar(numero: str, ctx: Context, comentario: str | None = None) -> RequestSummary:
+        """Aprueba una solicitud pendiente (ej. REQ0010001). Confirma con el usuario antes."""
+        return await _call(services, ctx, lambda c: aprobar(services, c, numero, comentario))
+
+    @server.tool(name="rechazar")
+    async def _rechazar(numero: str, ctx: Context, comentario: str | None = None) -> RequestSummary:
+        """Rechaza una solicitud pendiente (ej. REQ0010001) con un comentario. Confirma antes."""
+        return await _call(services, ctx, lambda c: rechazar(services, c, numero, comentario))
 
     # Crea el session manager. Sin estado entre peticiones: cada llamada trae su token.
     server.streamable_http_app(

@@ -60,6 +60,9 @@ class ServiceNowClient:
         self._token_expires_at = 0.0
         self._token_lock = asyncio.Lock()
 
+    async def aclose(self) -> None:
+        await self._http.aclose()
+
     async def create(self, table: str, fields: Mapping[str, str]) -> Record:
         body = await self._call("POST", f"/api/now/table/{table}", json=dict(fields))
         return _record(body["result"])

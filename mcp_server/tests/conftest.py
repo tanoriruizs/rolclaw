@@ -5,6 +5,7 @@ import zlib
 from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 
+import httpx2
 import numpy as np
 import pytest
 from fakeredis import FakeAsyncRedis, FakeServer
@@ -16,8 +17,12 @@ from assistant.company import Company, load_company
 from assistant.config import Settings
 from assistant.main import create_app
 from assistant.rag.embeddings import Vectors, normalize
+from assistant.servicenow_client import ServiceNowClient
+from servicenow_mock.main import MockSettings
+from servicenow_mock.main import create_app as create_servicenow_mock
 
 EMPRESA_DIR = Path(__file__).resolve().parents[2] / "empresa"
+SERVICENOW_SECRET = "secreto-de-servicenow-de-prueba"
 ROLE_TOKENS = {
     role: f"{role}-token-de-prueba-{'0' * 32}" for role in ("ventas", "rh", "empleado", "gerente")
 }
@@ -89,9 +94,26 @@ def fake_redis() -> FakeAsyncRedis:
 
 
 @pytest.fixture
-def make_app(fake_redis: FakeAsyncRedis, embedder: HashingEmbedder) -> AppFactory:
-    """Crea la app con Redis y embeddings falsos: sin red, sin descargar modelos."""
-    return lambda settings: create_app(settings, redis=fake_redis, embedder=embedder)
+def servicenow() -> ServiceNowClient:
+    """Cliente real conectado al ServiceNow simulado, en memoria (sin red)."""
+    mock = create_servicenow_mock(
+        MockSettings(servicenow_client_secret=SecretStr(SERVICENOW_SECRET)),
+        redis=FakeAsyncRedis(server=FakeServer()),
+    )
+    http = httpx2.AsyncClient(transport=httpx2.ASGITransport(app=mock))
+    return ServiceNowClient(
+        http, "http://servicenow.test", "cardinal-assistant", SecretStr(SERVICENOW_SECRET)
+    )
+
+
+@pytest.fixture
+def make_app(
+    fake_redis: FakeAsyncRedis, embedder: HashingEmbedder, servicenow: ServiceNowClient
+) -> AppFactory:
+    """Crea la app con Redis, embeddings y ServiceNow locales: sin red ni modelos."""
+    return lambda settings: create_app(
+        settings, redis=fake_redis, embedder=embedder, servicenow=servicenow
+    )
 
 
 @pytest.fixture
