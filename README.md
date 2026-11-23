@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/mascota.png" alt="Mascota del proyecto: un personaje blanco con lentes y un gafete con candado" width="170">
+</p>
+
 # Asistente empresarial por roles
 
 **Agentes de IA para empresas donde los permisos los decide el servidor, nunca el modelo.**
@@ -207,5 +211,9 @@ OpenClaw · Telegram · Docker Compose · uv · ruff · mypy · pytest · GitHub
 
 Grupo Cardinal, sus empleados, productos y documentos son **ficticios**. Las políticas
 siguen la Ley Federal del Trabajo de México solo como ejemplo; no son asesoría legal.
+
+La mascota es un dibujo propio inspirado en el estilo de la de
+[OpenClaw](https://docs.openclaw.ai). Este proyecto usa OpenClaw, pero es independiente y
+no está afiliado a él.
 
 Licencia [MIT](LICENSE).
