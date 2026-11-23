@@ -13,7 +13,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  checks:
+    name: Lint, tests y secretos
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -31,5 +32,68 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      - name: Lint, tests y secretos
+      - name: ruff, mypy, pytest (cobertura >= 80 %) y gitleaks
         run: make ci
+
+  docker:
+    name: Imágenes y ataques al sandbox
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      # Solo para que compose pueda leer el servicio openclaw; aquí no se levanta.
+      ANTHROPIC_API_KEY: sin-uso-en-ci
+      TELEGRAM_BOT_TOKEN_VENTAS: sin-uso-en-ci
+      TELEGRAM_BOT_TOKEN_RH: sin-uso-en-ci
+      TELEGRAM_BOT_TOKEN_EMPLEADO: sin-uso-en-ci
+      TELEGRAM_BOT_TOKEN_GERENTE: sin-uso-en-ci
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Imagen mcp-server
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: mcp_server/Dockerfile
+          tags: cardinal/mcp-server:dev
+          load: true
+          cache-from: type=gha,scope=mcp-server
+          cache-to: type=gha,mode=max,scope=mcp-server
+
+      - name: Imagen sandbox
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: sandbox/Dockerfile
+          tags: cardinal/sandbox:dev
+          load: true
+          cache-from: type=gha,scope=sandbox
+          cache-to: type=gha,mode=max,scope=sandbox
+
+      - name: Imagen servicenow-mock
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: servicenow_mock/Dockerfile
+          tags: cardinal/servicenow-mock:dev
+          load: true
+          cache-from: type=gha,scope=servicenow-mock
+          cache-to: type=gha,mode=max,scope=servicenow-mock
+
+      - name: Secretos de prueba (generados en el momento)
+        run: cp .env.example .env && python3 scripts/gen_tokens.py
+
+      - name: Levantar servicios (sin OpenClaw ni Telegram)
+        run: docker compose up -d --no-build --wait redis servicenow-mock sandbox mcp-server
+
+      - name: Prueba de humo
+        run: curl -fsS http://127.0.0.1:8000/ready
+
+      - name: Intentos de escape contra el sandbox real
+        run: make sandbox-check
+
+      - name: Logs de los servicios
+        if: failure()
+        run: docker compose logs --no-color
