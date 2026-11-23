@@ -10,9 +10,17 @@
   plugins: {
     entries: {
       anthropic: { enabled: true },
-      // Sin uso aquí; además evitan que intente crear enlaces junto al archivo de config.
+      // Lo que no se usa no se carga: menos superficie de ataque.
       canvas: { enabled: false },
       browser: { enabled: false },
+      "cua-computer": { enabled: false },
+      "file-transfer": { enabled: false },
+      geolocation: { enabled: false },
+      github: { enabled: false },
+      "linux-node": { enabled: false },
+      ollama: { enabled: false },
+      "talk-voice": { enabled: false },
+      xai: { enabled: false },
     },
   },
 

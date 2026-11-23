@@ -2,7 +2,7 @@
 UV := uv
 COMPOSE := docker compose
 
-.PHONY: help setup tokens up down logs ps ingest sandbox-check run lint format test secrets ci
+.PHONY: help setup tokens up pairing down logs ps ingest sandbox-check run lint format test secrets ci
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -16,13 +16,13 @@ tokens: ## Genera tokens de rol y secretos locales en .env
 	$(UV) run python scripts/gen_tokens.py
 
 up: ## Construye y levanta los servicios; espera a que estén sanos
-	@# Recomendación de openclaw security audit: config solo para su dueño (uid 1000).
-	chmod 600 openclaw/openclaw.json5
 	$(COMPOSE) up -d --build --wait redis servicenow-mock sandbox mcp-server
-	@# Los archivos montados (config, AGENTS.md, SOUL.md) se fijan al crear el contenedor:
-	@# se recrea para que siempre lea la versión actual.
+	@# OpenClaw copia su config y sus agentes del repo al arrancar: se recrea para aplicar cambios.
 	$(COMPOSE) up -d --wait --force-recreate --no-deps openclaw
-	$(COMPOSE) exec -T openclaw chmod 700 /home/node/.openclaw/credentials
+
+pairing: ## Aprueba el pairing de Telegram solo para TELEGRAM_OWNER_ID (ver .env)
+	@$(COMPOSE) exec -T openclaw sh /config-src/approve_pairing.sh \
+		"$$(grep -E '^TELEGRAM_OWNER_ID=' .env | cut -d= -f2)"
 
 down: ## Detiene los servicios (los datos de Redis se conservan)
 	$(COMPOSE) down

@@ -93,7 +93,7 @@ services:
   openclaw:
     image: ghcr.io/openclaw/openclaw:2026.11.6
     environment:
-      OPENCLAW_CONFIG_PATH: /config/openclaw.json5
+      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json5
       OPENCLAW_PORT: ${OPENCLAW_PORT:-18790}
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?ejecuta make tokens}
       OPENCLAW_MODEL: ${OPENCLAW_MODEL:-anthropic/claude-sonnet-5-5}
@@ -106,18 +106,12 @@ services:
       TELEGRAM_BOT_TOKEN_RH: ${TELEGRAM_BOT_TOKEN_RH:?crea los bots con @BotFather}
       TELEGRAM_BOT_TOKEN_EMPLEADO: ${TELEGRAM_BOT_TOKEN_EMPLEADO:?crea los bots con @BotFather}
       TELEGRAM_BOT_TOKEN_GERENTE: ${TELEGRAM_BOT_TOKEN_GERENTE:?crea los bots con @BotFather}
+    # start.sh copia la config y los agentes del repo al estado y arranca la imagen normal.
+    entrypoint: ["sh", "/config-src/start.sh"]
+    command: ["node", "openclaw.mjs", "gateway"]
     volumes:
       - openclaw-state:/home/node/.openclaw
-      - ./openclaw/openclaw.json5:/config/openclaw.json5:ro
-      # Reglas comunes (AGENTS.md) + personalidad por rol (SOUL.md), en solo lectura.
-      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-ventas/AGENTS.md:ro
-      - ./openclaw/agentes/ventas/SOUL.md:/home/node/.openclaw/workspace-ventas/SOUL.md:ro
-      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-rh/AGENTS.md:ro
-      - ./openclaw/agentes/rh/SOUL.md:/home/node/.openclaw/workspace-rh/SOUL.md:ro
-      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-empleado/AGENTS.md:ro
-      - ./openclaw/agentes/empleado/SOUL.md:/home/node/.openclaw/workspace-empleado/SOUL.md:ro
-      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-gerente/AGENTS.md:ro
-      - ./openclaw/agentes/gerente/SOUL.md:/home/node/.openclaw/workspace-gerente/SOUL.md:ro
+      - ./openclaw:/config-src:ro
     ports:
       # 18790 y no 18789: así no choca con la instalación de OpenClaw que ya existe.
       - "127.0.0.1:${OPENCLAW_PORT:-18790}:18789"
