@@ -2,7 +2,7 @@
 UV := uv
 COMPOSE := docker compose
 
-.PHONY: help setup tokens up pairing demo-reset down logs ps ingest sandbox-check run \
+.PHONY: help setup tokens up reload pairing demo-reset down logs ps ingest sandbox-check run \
 	lint format test secrets ci
 
 help: ## Muestra esta ayuda
@@ -20,6 +20,10 @@ up: ## Construye y levanta los servicios; espera a que estén sanos
 	$(COMPOSE) up -d --build --wait redis servicenow-mock sandbox mcp-server
 	@# OpenClaw copia su config y sus agentes del repo al arrancar: se recrea para aplicar cambios.
 	$(COMPOSE) up -d --wait --force-recreate --no-deps openclaw
+
+reload: ## Aplica cambios en empresa/ (reinicia el MCP server; re-indexa si hace falta)
+	$(COMPOSE) restart mcp-server
+	$(COMPOSE) up -d --wait mcp-server
 
 pairing: ## Aprueba el pairing de Telegram solo para TELEGRAM_OWNER_ID (ver .env)
 	@$(COMPOSE) exec -T openclaw sh /config-src/approve_pairing.sh \
