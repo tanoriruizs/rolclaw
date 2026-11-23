@@ -220,3 +220,10 @@ async def test_demo_scene_one_over_mcp(app: FastAPI) -> None:
 def _data_object(result: CallToolResult) -> Any:
     assert not result.is_error, _text(result)
     return result.structured_content
+
+
+async def test_sales_agent_finds_the_laptop_price_over_mcp(app: FastAPI) -> None:
+    async with mcp_session(app, "ventas") as client:
+        result = await client.call_tool("consultar_catalogo", {"busqueda": "laptop"})
+
+    assert [(p["id"], p["precio"]) for p in _data(result)] == [("LAP-001", "15000")]

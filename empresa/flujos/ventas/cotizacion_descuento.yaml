@@ -9,6 +9,7 @@ datos_requeridos:
   - { campo: descuento_pct, tipo: decimal, min: 0, max: 100 }
 pasos:
   - Verificar que el cliente exista o darlo de alta
+  - Obtener el id y el precio del producto con la herramienta consultar_catalogo
   - Calcular el total con descuento usando la herramienta calcular
   - Si el descuento supera el límite, la solicitud queda pendiente de aprobación
 reglas:

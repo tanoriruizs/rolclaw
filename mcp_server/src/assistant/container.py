@@ -9,6 +9,7 @@ from redis.asyncio import Redis
 
 from assistant.audit import AuditLog
 from assistant.auth import TokenAuthenticator
+from assistant.catalog import ProductCatalog
 from assistant.company import Company, load_company
 from assistant.config import Settings
 from assistant.errors import ConfigurationError
@@ -26,6 +27,7 @@ class Services:
     auth: TokenAuthenticator
     permissions: Permissions
     flows: FlowCatalog
+    catalog: ProductCatalog
     redis: Redis
     embedder: Embedder
     store: VectorStore
@@ -57,6 +59,7 @@ def build_services(
         auth=auth,
         permissions=Permissions(company.roles),
         flows=FlowCatalog(company.flujos),
+        catalog=ProductCatalog(company.catalogo),
         redis=redis,
         embedder=embedder,
         store=store,

@@ -15,6 +15,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from assistant import __version__
 from assistant.auth import Caller, TokenAuthenticator
+from assistant.catalog import CatalogItem
 from assistant.config import Settings
 from assistant.container import Services
 from assistant.errors import AssistantError, AuthenticationError
@@ -25,6 +26,7 @@ from assistant.sandbox_client import CalculationResult
 from assistant.tools.aprobar import aprobar
 from assistant.tools.buscar_conocimiento import buscar_conocimiento
 from assistant.tools.calcular import calcular
+from assistant.tools.consultar_catalogo import consultar_catalogo
 from assistant.tools.iniciar_solicitud import iniciar_solicitud
 from assistant.tools.listar_flujos import listar_flujos
 from assistant.tools.mis_solicitudes import mis_solicitudes
@@ -57,6 +59,15 @@ def build_mcp_server(services: Services, settings: Settings) -> MCPServer:
         return await _call(
             services, ctx, lambda c: buscar_conocimiento(services, c, pregunta, top_k)
         )
+
+    @server.tool(name="consultar_catalogo")
+    async def _consultar_catalogo(ctx: Context, busqueda: str | None = None) -> list[CatalogItem]:
+        """Busca productos del catálogo: id, nombre, categoría y precio unitario sin IVA.
+
+        busqueda (opcional): texto como "laptop" o "monitor"; sin búsqueda devuelve todo.
+        Usa el id y el precio que devuelve; nunca los inventes ni los pidas al usuario.
+        """
+        return await _call(services, ctx, lambda c: consultar_catalogo(services, c, busqueda))
 
     @server.tool(name="calcular")
     async def _calcular(codigo: str, ctx: Context) -> CalculationResult:

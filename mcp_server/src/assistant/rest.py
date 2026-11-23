@@ -12,6 +12,7 @@ from redis.exceptions import RedisError
 
 from assistant.audit import AuditEvent
 from assistant.auth import Caller
+from assistant.catalog import CatalogItem
 from assistant.company import Tool
 from assistant.container import Services
 from assistant.errors import AuthenticationError
@@ -22,6 +23,7 @@ from assistant.sandbox_client import CalculationResult
 from assistant.tools.aprobar import aprobar
 from assistant.tools.buscar_conocimiento import buscar_conocimiento
 from assistant.tools.calcular import calcular
+from assistant.tools.consultar_catalogo import consultar_catalogo
 from assistant.tools.iniciar_solicitud import iniciar_solicitud
 from assistant.tools.listar_flujos import listar_flujos
 from assistant.tools.mis_solicitudes import mis_solicitudes
@@ -108,6 +110,13 @@ async def me(services: ServicesDep, caller: CallerDep) -> Me:
         empleado_id=caller.employee_id,
         herramientas=sorted(services.permissions.tools_for(caller.role)),
     )
+
+
+@api_router.get("/catalogo")
+async def get_catalog(
+    services: ServicesDep, caller: CallerDep, busqueda: str | None = None
+) -> list[CatalogItem]:
+    return await consultar_catalogo(services, caller, busqueda)
 
 
 @api_router.get("/flujos")

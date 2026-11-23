@@ -15,6 +15,7 @@ Identifier = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_]*$")]
 
 class Tool(StrEnum):
     BUSCAR_CONOCIMIENTO = "buscar_conocimiento"
+    CONSULTAR_CATALOGO = "consultar_catalogo"
     LISTAR_FLUJOS = "listar_flujos"
     VER_FLUJO = "ver_flujo"
     INICIAR_SOLICITUD = "iniciar_solicitud"

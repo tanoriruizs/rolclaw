@@ -13,11 +13,17 @@ COMMON = {
 }
 # La matriz esperada es la especificación del plan; si roles.yaml cambia, este test lo detecta.
 EXPECTED = {
-    "ventas": COMMON | {Tool.INICIAR_SOLICITUD},
+    "ventas": COMMON | {Tool.INICIAR_SOLICITUD, Tool.CONSULTAR_CATALOGO},
     "rh": COMMON | {Tool.INICIAR_SOLICITUD},
     "empleado": COMMON | {Tool.INICIAR_SOLICITUD},
     "gerente": COMMON
-    | {Tool.PENDIENTES_DE_APROBAR, Tool.APROBAR, Tool.RECHAZAR, Tool.VER_AUDITORIA},
+    | {
+        Tool.PENDIENTES_DE_APROBAR,
+        Tool.APROBAR,
+        Tool.RECHAZAR,
+        Tool.VER_AUDITORIA,
+        Tool.CONSULTAR_CATALOGO,
+    },
 }
 
 
