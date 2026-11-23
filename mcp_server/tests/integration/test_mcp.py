@@ -20,8 +20,7 @@ from assistant.config import Settings
 from assistant.mcp_app import _call
 
 BASE_URL = "http://127.0.0.1:8000"
-# calcular llega en la Fase 3; ver_auditoria es solo REST.
-NOT_IN_MCP = {"calcular", "ver_auditoria"}
+NOT_IN_MCP = {"ver_auditoria"}  # la auditoría es solo REST
 
 
 @asynccontextmanager

@@ -32,6 +32,27 @@ services:
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
 
+  # Ejecuta el código de los cálculos. Sin red: solo se le habla por un socket Unix.
+  sandbox:
+    build:
+      context: .
+      dockerfile: sandbox/Dockerfile
+    image: cardinal/sandbox:dev
+    # tini como PID 1: recoge los procesos zombie (si no, siguen contando para el límite).
+    init: true
+    network_mode: none
+    volumes:
+      - sandbox-socket:/run/sandbox
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+
   mcp-server:
     build:
       context: .
@@ -48,14 +69,18 @@ services:
       SERVICENOW_BASE_URL: ${SERVICENOW_BASE_URL:-http://servicenow-mock:8100}
       SERVICENOW_CLIENT_ID: ${SERVICENOW_CLIENT_ID:-cardinal-assistant}
       SERVICENOW_CLIENT_SECRET: ${SERVICENOW_CLIENT_SECRET:?ejecuta make tokens}
+      SANDBOX_SOCKET: /run/sandbox/sandbox.sock
     volumes:
       - ./empresa:/app/empresa:ro
+      - sandbox-socket:/run/sandbox
     ports:
       - "127.0.0.1:${MCP_PORT:-8000}:8000"
     depends_on:
       redis:
         condition: service_healthy
       servicenow-mock:
+        condition: service_healthy
+      sandbox:
         condition: service_healthy
     read_only: true
     tmpfs:
@@ -66,3 +91,4 @@ services:
 
 volumes:
   redis-data:
+  sandbox-socket:

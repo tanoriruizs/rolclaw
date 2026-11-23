@@ -9,6 +9,7 @@ WORKDIR /app
 # Primero solo las dependencias: esta capa se reutiliza mientras uv.lock no cambie.
 COPY pyproject.toml uv.lock ./
 COPY mcp_server/pyproject.toml mcp_server/
+COPY sandbox/pyproject.toml sandbox/
 COPY servicenow_mock/pyproject.toml servicenow_mock/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --package assistant --no-install-workspace

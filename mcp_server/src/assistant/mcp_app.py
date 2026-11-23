@@ -21,8 +21,10 @@ from assistant.errors import AssistantError, AuthenticationError
 from assistant.flows import FlowDetail, FlowSummary
 from assistant.rag import Fragment
 from assistant.requests_service import RequestSummary
+from assistant.sandbox_client import CalculationResult
 from assistant.tools.aprobar import aprobar
 from assistant.tools.buscar_conocimiento import buscar_conocimiento
+from assistant.tools.calcular import calcular
 from assistant.tools.iniciar_solicitud import iniciar_solicitud
 from assistant.tools.listar_flujos import listar_flujos
 from assistant.tools.mis_solicitudes import mis_solicitudes
@@ -55,6 +57,16 @@ def build_mcp_server(services: Services, settings: Settings) -> MCPServer:
         return await _call(
             services, ctx, lambda c: buscar_conocimiento(services, c, pregunta, top_k)
         )
+
+    @server.tool(name="calcular")
+    async def _calcular(codigo: str, ctx: Context) -> CalculationResult:
+        """Ejecuta código Python en un sandbox aislado. Úsala para CUALQUIER operación numérica.
+
+        Nunca calcules de memoria. La última expresión del código es el resultado, por ejemplo:
+        "50 * 15000 * (1 - 15 / 100)". Solo biblioteca estándar (math, decimal, datetime,
+        statistics); sin red ni archivos. Tiempo máximo: 5 segundos.
+        """
+        return await _call(services, ctx, lambda c: calcular(services, c, codigo))
 
     @server.tool(name="listar_flujos")
     async def _listar_flujos(ctx: Context) -> list[FlowSummary]:

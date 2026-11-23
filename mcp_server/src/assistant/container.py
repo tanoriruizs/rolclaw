@@ -16,6 +16,7 @@ from assistant.flows import FlowCatalog
 from assistant.permissions import Permissions
 from assistant.rag import Embedder, FastEmbedEmbedder, KnowledgeSearch, VectorStore
 from assistant.requests_service import RequestsService
+from assistant.sandbox_client import SandboxClient
 from assistant.servicenow_client import ServiceNowClient
 
 
@@ -32,6 +33,7 @@ class Services:
     servicenow: ServiceNowClient
     requests: RequestsService
     audit: AuditLog
+    sandbox: SandboxClient
 
 
 def build_services(
@@ -40,13 +42,15 @@ def build_services(
     redis: Redis | None = None,
     embedder: Embedder | None = None,
     servicenow: ServiceNowClient | None = None,
+    sandbox: SandboxClient | None = None,
 ) -> Services:
-    """redis, embedder y servicenow se pueden inyectar (los tests usan versiones locales)."""
+    """Los clientes externos se pueden inyectar (los tests usan versiones locales)."""
     company = load_company(settings.empresa_dir)
     auth = TokenAuthenticator(settings.role_tokens, company)  # primero lo más básico
     redis = redis or create_redis(settings)
     embedder = embedder or create_embedder(settings)
     servicenow = servicenow or create_servicenow(settings)
+    sandbox = sandbox or create_sandbox(settings)
     store = VectorStore(redis)
     return Services(
         company=company,
@@ -60,6 +64,7 @@ def build_services(
         servicenow=servicenow,
         requests=RequestsService(company, servicenow),
         audit=AuditLog(redis),
+        sandbox=sandbox,
     )
 
 
@@ -81,3 +86,10 @@ def create_servicenow(settings: Settings) -> ServiceNowClient:
         settings.servicenow_client_id,
         settings.servicenow_client_secret,
     )
+
+
+def create_sandbox(settings: Settings) -> SandboxClient:
+    transport = httpx2.AsyncHTTPTransport(uds=str(settings.sandbox_socket))
+    # El tiempo máximo del sandbox es 5 s, pero los cálculos se atienden de uno en uno.
+    http = httpx2.AsyncClient(transport=transport, base_url="http://sandbox", timeout=15.0)
+    return SandboxClient(http)

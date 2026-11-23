@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     servicenow_base_url: str = "http://localhost:8100"
     servicenow_client_id: str = "cardinal-assistant"
     servicenow_client_secret: SecretStr | None = None
+    sandbox_socket: Path = Path("/run/sandbox/sandbox.sock")
     # Valores válidos del header Host en /mcp (protección contra DNS rebinding).
     mcp_allowed_hosts: list[str] = ["127.0.0.1:*", "localhost:*", "mcp-server:*"]
 

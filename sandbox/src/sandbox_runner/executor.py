@@ -133,8 +133,9 @@ def kill_stray_processes(proc_dir: Path = Path("/proc")) -> list[int]:
 
     Un código malicioso puede escapar de su grupo con setsid() y quedarse dormido;
     como los cálculos van de uno en uno, al terminar no debería quedar nada vivo.
+    PID 1 es tini (init: true en compose), que recoge los procesos que mueren.
     """
-    own = {1, os.getpid()}
+    own = {1, os.getpid(), os.getppid()}
     killed: list[int] = []
     for entry in proc_dir.iterdir():
         if entry.name.isdigit() and int(entry.name) not in own:

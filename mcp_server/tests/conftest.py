@@ -17,7 +17,10 @@ from assistant.company import Company, load_company
 from assistant.config import Settings
 from assistant.main import create_app
 from assistant.rag.embeddings import Vectors, normalize
+from assistant.sandbox_client import SandboxClient
 from assistant.servicenow_client import ServiceNowClient
+from sandbox_runner.app import create_app as create_sandbox_app
+from sandbox_runner.executor import Executor
 from servicenow_mock.main import MockSettings
 from servicenow_mock.main import create_app as create_servicenow_mock
 
@@ -107,12 +110,27 @@ def servicenow() -> ServiceNowClient:
 
 
 @pytest.fixture
+def sandbox(tmp_path: Path) -> SandboxClient:
+    """Cliente real conectado al runner real (procesos hijos de verdad), en memoria."""
+    runner = create_sandbox_app(Executor(work_root=tmp_path, kill_strays=False))
+    transport = httpx2.ASGITransport(app=runner)
+    return SandboxClient(httpx2.AsyncClient(transport=transport, base_url="http://sandbox"))
+
+
+@pytest.fixture
 def make_app(
-    fake_redis: FakeAsyncRedis, embedder: HashingEmbedder, servicenow: ServiceNowClient
+    fake_redis: FakeAsyncRedis,
+    embedder: HashingEmbedder,
+    servicenow: ServiceNowClient,
+    sandbox: SandboxClient,
 ) -> AppFactory:
     """Crea la app con Redis, embeddings y ServiceNow locales: sin red ni modelos."""
     return lambda settings: create_app(
-        settings, redis=fake_redis, embedder=embedder, servicenow=servicenow
+        settings,
+        redis=fake_redis,
+        embedder=embedder,
+        servicenow=servicenow,
+        sandbox=sandbox,
     )
 
 

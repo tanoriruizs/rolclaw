@@ -2,7 +2,7 @@
 UV := uv
 COMPOSE := docker compose
 
-.PHONY: help setup tokens up down logs ps ingest run lint format test secrets ci
+.PHONY: help setup tokens up down logs ps ingest sandbox-check run lint format test secrets ci
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -29,6 +29,9 @@ ps: ## Estado y salud de los servicios
 
 ingest: ## Re-indexa los documentos de empresa/ dentro del contenedor
 	$(COMPOSE) exec mcp-server python -m assistant.rag.ingest
+
+sandbox-check: ## Lanza intentos de escape contra el sandbox real
+	$(COMPOSE) exec -T mcp-server python -m assistant.sandbox_check
 
 run: ## Servidor local con recarga automática (necesita un Redis en localhost:6379)
 	$(UV) run --env-file .env uvicorn assistant.main:create_app --factory --reload \

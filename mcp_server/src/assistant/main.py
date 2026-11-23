@@ -20,6 +20,7 @@ from assistant.logs import RequestContextMiddleware, configure_logging
 from assistant.mcp_app import build_mcp_server, mcp_endpoint
 from assistant.rag import Embedder, ensure_index
 from assistant.rest import api_router, health_router
+from assistant.sandbox_client import SandboxClient
 from assistant.servicenow_client import ServiceNowClient
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("servidor listo")
         yield
     await services.servicenow.aclose()
+    await services.sandbox.aclose()
     await services.redis.aclose()
 
 
@@ -42,6 +44,7 @@ def create_app(
     redis: Redis | None = None,
     embedder: Embedder | None = None,
     servicenow: ServiceNowClient | None = None,
+    sandbox: SandboxClient | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_environ()
     configure_logging(settings.log_level)
@@ -49,7 +52,9 @@ def create_app(
     app = FastAPI(
         title="Grupo Cardinal - Asistente por roles", version=__version__, lifespan=lifespan
     )
-    services = build_services(settings, redis=redis, embedder=embedder, servicenow=servicenow)
+    services = build_services(
+        settings, redis=redis, embedder=embedder, servicenow=servicenow, sandbox=sandbox
+    )
     app.state.services = services
     app.state.mcp = build_mcp_server(services, settings)
     app.add_middleware(RequestContextMiddleware)

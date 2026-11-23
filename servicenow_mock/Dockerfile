@@ -8,6 +8,7 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 COPY mcp_server/pyproject.toml mcp_server/
+COPY sandbox/pyproject.toml sandbox/
 COPY servicenow_mock/pyproject.toml servicenow_mock/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --package servicenow-mock --no-install-workspace

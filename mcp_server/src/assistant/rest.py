@@ -18,8 +18,10 @@ from assistant.errors import AuthenticationError
 from assistant.flows import FlowDetail, FlowSummary
 from assistant.rag import Fragment
 from assistant.requests_service import RequestSummary
+from assistant.sandbox_client import CalculationResult
 from assistant.tools.aprobar import aprobar
 from assistant.tools.buscar_conocimiento import buscar_conocimiento
+from assistant.tools.calcular import calcular
 from assistant.tools.iniciar_solicitud import iniciar_solicitud
 from assistant.tools.listar_flujos import listar_flujos
 from assistant.tools.mis_solicitudes import mis_solicitudes
@@ -67,6 +69,10 @@ class SearchRequest(BaseModel):
 class NewRequest(BaseModel):
     flujo_id: str
     datos: dict[str, object]
+
+
+class CalculationRequest(BaseModel):
+    codigo: str
 
 
 class DecisionRequest(BaseModel):
@@ -119,6 +125,13 @@ async def search_knowledge(
     body: SearchRequest, services: ServicesDep, caller: CallerDep
 ) -> list[Fragment]:
     return await buscar_conocimiento(services, caller, body.pregunta, body.top_k)
+
+
+@api_router.post("/calcular")
+async def calculate(
+    body: CalculationRequest, services: ServicesDep, caller: CallerDep
+) -> CalculationResult:
+    return await calcular(services, caller, body.codigo)
 
 
 @api_router.get("/auditoria")
