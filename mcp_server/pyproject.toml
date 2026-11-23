@@ -6,6 +6,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.165.0",
     "fastembed>=0.9.1",
+    "httpx2>=2.16.2",
     "mcp>=2.3.0",
     "numpy>=2.5.5",
     "pydantic>=2.14.4",

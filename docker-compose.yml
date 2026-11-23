@@ -13,6 +13,25 @@ services:
       retries: 10
     restart: unless-stopped
 
+  servicenow-mock:
+    build:
+      context: .
+      dockerfile: servicenow_mock/Dockerfile
+    image: cardinal/servicenow-mock:dev
+    environment:
+      REDIS_URL: redis://redis:6379/1
+      SERVICENOW_CLIENT_ID: ${SERVICENOW_CLIENT_ID:-cardinal-assistant}
+      SERVICENOW_CLIENT_SECRET: ${SERVICENOW_CLIENT_SECRET:?ejecuta make tokens}
+    depends_on:
+      redis:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
   mcp-server:
     build:
       context: .
