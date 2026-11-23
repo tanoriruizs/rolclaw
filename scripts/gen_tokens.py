@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 GENERATED_PREFIXES = ("ROLE_TOKEN_",)
-GENERATED_KEYS = frozenset({"SERVICENOW_CLIENT_SECRET"})
+GENERATED_KEYS = frozenset({"SERVICENOW_CLIENT_SECRET", "OPENCLAW_GATEWAY_TOKEN"})
 TOKEN_BYTES = 32  # 256 bits
 
 
@@ -32,6 +32,22 @@ def fill_secrets(text: str, *, force: bool = False) -> tuple[str, list[str]]:
     return "\n".join(output) + "\n", filled
 
 
+def add_missing(env_text: str, example_text: str) -> tuple[str, list[str]]:
+    """Agrega al final las variables de la plantilla que el .env todavía no tiene."""
+    present = {_key(line) for line in env_text.splitlines()} - {None}
+    missing = [line for line in example_text.splitlines() if _key(line) not in present | {None}]
+    if not missing:
+        return env_text, []
+    block = "\n# Agregadas desde .env.example\n" + "\n".join(missing) + "\n"
+    return env_text.rstrip("\n") + "\n" + block, [str(_key(line)) for line in missing]
+
+
+def _key(line: str) -> str | None:
+    key, separator, _ = line.partition("=")
+    key = key.strip()
+    return key if separator and key and not key.startswith("#") else None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Genera los secretos locales en .env.")
     parser.add_argument("--env", type=Path, default=Path(".env"))
@@ -47,7 +63,12 @@ def main(argv: list[str] | None = None) -> int:
         shutil.copyfile(args.example, env_path)
         print(f"Creado {env_path} a partir de {args.example}.")
 
-    content, filled = fill_secrets(env_path.read_text(encoding="utf-8"), force=args.force)
+    content = env_path.read_text(encoding="utf-8")
+    if args.example.exists():
+        content, added = add_missing(content, args.example.read_text(encoding="utf-8"))
+        if added:
+            print("Variables nuevas agregadas:", ", ".join(added))
+    content, filled = fill_secrets(content, force=args.force)
     env_path.write_text(content, encoding="utf-8")
     env_path.chmod(0o600)  # solo el usuario puede leerlo
 

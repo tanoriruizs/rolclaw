@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from gen_tokens import fill_secrets, main
+from gen_tokens import add_missing, fill_secrets, main
 
 EXAMPLE = """\
 # comentario: ROLE_TOKEN_COMENTADO=
@@ -73,3 +73,30 @@ def test_main_fails_without_env_or_example(tmp_path: Path) -> None:
     args = ["--env", str(tmp_path / ".env"), "--example", str(tmp_path / "missing")]
 
     assert main(args) == 1
+
+
+def test_add_missing_appends_only_new_variables() -> None:
+    env = "ROLE_TOKEN_VENTAS=valor-existente\n# comentario\n"
+    example = "ROLE_TOKEN_VENTAS=\n# OpenClaw\nOPENCLAW_GATEWAY_TOKEN=\nOPENCLAW_PORT=18790\n"
+
+    content, added = add_missing(env, example)
+
+    assert added == ["OPENCLAW_GATEWAY_TOKEN", "OPENCLAW_PORT"]
+    assert content.startswith("ROLE_TOKEN_VENTAS=valor-existente\n")
+    assert content.endswith("OPENCLAW_GATEWAY_TOKEN=\nOPENCLAW_PORT=18790\n")
+    assert add_missing(content, example) == (content, [])
+
+
+def test_main_upgrades_an_old_env_and_fills_new_secrets(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    example, env = tmp_path / ".env.example", tmp_path / ".env"
+    example.write_text("ROLE_TOKEN_VENTAS=\nOPENCLAW_GATEWAY_TOKEN=\n", encoding="utf-8")
+    env.write_text("ROLE_TOKEN_VENTAS=ya-tenia-un-token\n", encoding="utf-8")
+
+    assert main(["--env", str(env), "--example", str(example)]) == 0
+
+    content = env.read_text(encoding="utf-8")
+    assert "ROLE_TOKEN_VENTAS=ya-tenia-un-token" in content
+    assert "OPENCLAW_GATEWAY_TOKEN=\n" not in content
+    assert "Variables nuevas agregadas: OPENCLAW_GATEWAY_TOKEN" in capsys.readouterr().out

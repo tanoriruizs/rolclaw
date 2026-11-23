@@ -16,7 +16,13 @@ tokens: ## Genera tokens de rol y secretos locales en .env
 	$(UV) run python scripts/gen_tokens.py
 
 up: ## Construye y levanta los servicios; espera a que estén sanos
-	$(COMPOSE) up -d --build --wait
+	@# Recomendación de openclaw security audit: config solo para su dueño (uid 1000).
+	chmod 600 openclaw/openclaw.json5
+	$(COMPOSE) up -d --build --wait redis servicenow-mock sandbox mcp-server
+	@# Los archivos montados (config, AGENTS.md, SOUL.md) se fijan al crear el contenedor:
+	@# se recrea para que siempre lea la versión actual.
+	$(COMPOSE) up -d --wait --force-recreate --no-deps openclaw
+	$(COMPOSE) exec -T openclaw chmod 700 /home/node/.openclaw/credentials
 
 down: ## Detiene los servicios (los datos de Redis se conservan)
 	$(COMPOSE) down

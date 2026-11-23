@@ -89,6 +89,52 @@ services:
     security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
 
+  # Gateway de agentes. Imagen oficial con versión fija; config versionada y sin secretos.
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:2026.11.6
+    environment:
+      OPENCLAW_CONFIG_PATH: /config/openclaw.json5
+      OPENCLAW_PORT: ${OPENCLAW_PORT:-18790}
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?ejecuta make tokens}
+      OPENCLAW_MODEL: ${OPENCLAW_MODEL:-anthropic/claude-sonnet-5-5}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?pon tu API key de Anthropic en .env}
+      ROLE_TOKEN_VENTAS: ${ROLE_TOKEN_VENTAS:?ejecuta make tokens}
+      ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:?ejecuta make tokens}
+      ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:?ejecuta make tokens}
+      ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:?ejecuta make tokens}
+      TELEGRAM_BOT_TOKEN_VENTAS: ${TELEGRAM_BOT_TOKEN_VENTAS:?crea los bots con @BotFather}
+      TELEGRAM_BOT_TOKEN_RH: ${TELEGRAM_BOT_TOKEN_RH:?crea los bots con @BotFather}
+      TELEGRAM_BOT_TOKEN_EMPLEADO: ${TELEGRAM_BOT_TOKEN_EMPLEADO:?crea los bots con @BotFather}
+      TELEGRAM_BOT_TOKEN_GERENTE: ${TELEGRAM_BOT_TOKEN_GERENTE:?crea los bots con @BotFather}
+    volumes:
+      - openclaw-state:/home/node/.openclaw
+      - ./openclaw/openclaw.json5:/config/openclaw.json5:ro
+      # Reglas comunes (AGENTS.md) + personalidad por rol (SOUL.md), en solo lectura.
+      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-ventas/AGENTS.md:ro
+      - ./openclaw/agentes/ventas/SOUL.md:/home/node/.openclaw/workspace-ventas/SOUL.md:ro
+      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-rh/AGENTS.md:ro
+      - ./openclaw/agentes/rh/SOUL.md:/home/node/.openclaw/workspace-rh/SOUL.md:ro
+      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-empleado/AGENTS.md:ro
+      - ./openclaw/agentes/empleado/SOUL.md:/home/node/.openclaw/workspace-empleado/SOUL.md:ro
+      - ./openclaw/agentes/AGENTS.md:/home/node/.openclaw/workspace-gerente/AGENTS.md:ro
+      - ./openclaw/agentes/gerente/SOUL.md:/home/node/.openclaw/workspace-gerente/SOUL.md:ro
+    ports:
+      # 18790 y no 18789: así no choca con la instalación de OpenClaw que ya existe.
+      - "127.0.0.1:${OPENCLAW_PORT:-18790}:18789"
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18789/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
 volumes:
   redis-data:
   sandbox-socket:
+  openclaw-state:
