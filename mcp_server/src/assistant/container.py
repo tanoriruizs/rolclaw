@@ -48,7 +48,7 @@ def build_services(
 ) -> Services:
     """Los clientes externos se pueden inyectar (los tests usan versiones locales)."""
     company = load_company(settings.empresa_dir)
-    auth = TokenAuthenticator(settings.role_tokens, company)  # primero lo más básico
+    auth = TokenAuthenticator.from_settings(settings, company)  # primero lo más básico
     redis = redis or create_redis(settings)
     embedder = embedder or create_embedder(settings)
     servicenow = servicenow or create_servicenow(settings)

@@ -64,6 +64,14 @@ def test_only_gerente_can_approve(company: Company) -> None:
         ("roles.yaml", "mis_solicitudes, calcular]", "mis_solicitudes, borrar_todo]", "roles.yaml"),
         ("roles.yaml", "empleado_id: E-101", "empleado_id: E-999", "persona no coincide"),
         ("empleados.yaml", "jefe: E-301", "jefe: E-404", "jefe 'E-404' no existe"),
+        ("empleados.yaml", "rol: rh,", "rol: becario,", "empleado 'E-201': roles desconocidos"),
+        (
+            "empleados.yaml",
+            "rol: gerente,",
+            "rol: ventas,",
+            r"su persona demo \(E-001\) tiene otro rol",
+        ),
+        ("empleados.yaml", "rol: rh, ", "", "empleados.yaml"),
         ("catalogo.yaml", "precio: 15000", "precio: -1", "catalogo.yaml"),
         ("flujos/ventas/alta_cliente.yaml", "pasos:", "regals: []\npasos:", "alta_cliente.yaml"),
         (

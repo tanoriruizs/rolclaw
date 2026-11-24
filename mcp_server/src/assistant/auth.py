@@ -1,7 +1,14 @@
-"""Autenticación: token Bearer -> quién llama y con qué rol."""
+"""Autenticación: token Bearer -> quién llama y con qué rol.
+
+Dos modos:
+- demo: un token por rol; quien lo usa actúa como la persona demo de ese rol.
+- directorio: un token por empleado; el rol sale de empresa/empleados.yaml.
+"""
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import hmac
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -9,7 +16,7 @@ from dataclasses import dataclass
 from pydantic import SecretStr
 
 from assistant.company import Company
-from assistant.config import ROLE_TOKEN_PREFIX
+from assistant.config import ROLE_TOKEN_PREFIX, AuthMode, Settings
 from assistant.errors import ConfigurationError
 
 MIN_TOKEN_LENGTH = 32
@@ -22,20 +29,57 @@ class Caller:
     name: str
 
 
+def employee_token(secret: SecretStr, employee_id: str) -> str:
+    """Token de un empleado, derivado del secreto del directorio (HMAC-SHA256).
+
+    Así basta guardar un secreto: dar de alta a alguien no requiere generar ni repartir
+    un token nuevo a mano, y conocer un token no permite calcular el de otra persona.
+    """
+    digest = hmac.new(
+        secret.get_secret_value().encode(), employee_id.encode(), hashlib.sha256
+    ).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
+
+
 class TokenAuthenticator:
-    def __init__(self, tokens: Mapping[str, SecretStr], company: Company) -> None:
-        _validate_tokens(tokens, company)
-        self._entries = [
-            (
-                secret.get_secret_value().encode(),
-                Caller(
+    def __init__(self, callers_by_token: Mapping[str, Caller]) -> None:
+        self._entries = [(token.encode(), caller) for token, caller in callers_by_token.items()]
+
+    @classmethod
+    def from_settings(cls, settings: Settings, company: Company) -> TokenAuthenticator:
+        if settings.auth_mode is AuthMode.DIRECTORIO:
+            return cls.for_directory(settings.directory_token_secret, company)
+        return cls.for_roles(settings.role_tokens, company)
+
+    @classmethod
+    def for_roles(cls, tokens: Mapping[str, SecretStr], company: Company) -> TokenAuthenticator:
+        _validate_role_tokens(tokens, company)
+        return cls(
+            {
+                secret.get_secret_value(): Caller(
                     role=role,
                     employee_id=company.roles[role].persona.empleado_id,
                     name=company.roles[role].persona.nombre,
-                ),
+                )
+                for role, secret in tokens.items()
+            }
+        )
+
+    @classmethod
+    def for_directory(cls, secret: SecretStr | None, company: Company) -> TokenAuthenticator:
+        if secret is None or len(secret.get_secret_value()) < MIN_TOKEN_LENGTH:
+            raise ConfigurationError(
+                f"El modo directorio necesita DIRECTORY_TOKEN_SECRET (mínimo {MIN_TOKEN_LENGTH} "
+                "caracteres). Ejecuta make tokens."
             )
-            for role, secret in tokens.items()
-        ]
+        return cls(
+            {
+                employee_token(secret, employee.id): Caller(
+                    role=employee.rol, employee_id=employee.id, name=employee.nombre
+                )
+                for employee in company.empleados
+            }
+        )
 
     def authenticate(self, token: str) -> Caller | None:
         # Compara contra todos los tokens en tiempo constante, sin salir antes.
@@ -54,7 +98,7 @@ class TokenAuthenticator:
         return self.authenticate(token.strip())
 
 
-def _validate_tokens(tokens: Mapping[str, SecretStr], company: Company) -> None:
+def _validate_role_tokens(tokens: Mapping[str, SecretStr], company: Company) -> None:
     def env_names(roles: set[str]) -> str:
         return ", ".join(f"{ROLE_TOKEN_PREFIX}{role.upper()}" for role in sorted(roles))
 

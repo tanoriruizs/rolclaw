@@ -119,6 +119,7 @@ class Employee(_Model):
     nombre: str
     area: str
     puesto: str
+    rol: Identifier  # de aquí sale el rol en el modo directorio
     fecha_ingreso: date
     jefe: str | None = None
 
@@ -273,14 +274,21 @@ class Company(_Model):
     def _check_employees(self) -> None:
         _ensure_unique((e.id for e in self.empleados), "empleado")
         names = {e.id: e.nombre for e in self.empleados}
+        roles_by_employee = {e.id: e.rol for e in self.empleados}
         for employee in self.empleados:
             if employee.jefe is not None and employee.jefe not in names:
                 raise ValueError(f"empleado '{employee.id}': el jefe '{employee.jefe}' no existe")
+            self._check_known_roles({employee.rol}, f"empleado '{employee.id}'")
         for role_id, role in self.roles.items():
             persona = role.persona
             if names.get(persona.empleado_id) != persona.nombre:
                 raise ValueError(
                     f"rol '{role_id}': la persona no coincide con el empleado {persona.empleado_id}"
+                )
+            if roles_by_employee[persona.empleado_id] != role_id:
+                raise ValueError(
+                    f"rol '{role_id}': su persona demo ({persona.empleado_id}) tiene otro rol "
+                    "en empleados.yaml"
                 )
 
     def _check_flows(self) -> None:

@@ -26,6 +26,7 @@ from servicenow_mock.main import create_app as create_servicenow_mock
 
 EMPRESA_DIR = Path(__file__).resolve().parents[2] / "empresa"
 SERVICENOW_SECRET = "secreto-de-servicenow-de-prueba"
+DIRECTORY_SECRET = "secreto-del-directorio-de-prueba-" + "0" * 16
 ROLE_TOKENS = {
     role: f"{role}-token-de-prueba-{'0' * 32}" for role in ("ventas", "rh", "empleado", "gerente")
 }

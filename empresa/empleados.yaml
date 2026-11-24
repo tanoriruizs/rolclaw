@@ -1,7 +1,7 @@
 empleados:
-  - { id: E-001, nombre: Laura Vega, area: Dirección, puesto: Gerente general, fecha_ingreso: 2015-02-02, jefe: null }
-  - { id: E-101, nombre: Pedro Ramírez, area: Ventas, puesto: Ejecutivo de ventas, fecha_ingreso: 2021-05-17, jefe: E-001 }
-  - { id: E-102, nombre: Sofía Herrera, area: Ventas, puesto: Ejecutiva de ventas, fecha_ingreso: 2024-01-08, jefe: E-001 }
-  - { id: E-201, nombre: Ana Torres, area: Recursos Humanos, puesto: Coordinadora de RH, fecha_ingreso: 2019-09-02, jefe: E-001 }
-  - { id: E-301, nombre: Juan Méndez, area: Almacén, puesto: Analista de inventarios, fecha_ingreso: 2023-08-14, jefe: E-001 }
-  - { id: E-302, nombre: Mariana Cruz, area: Almacén, puesto: Auxiliar de almacén, fecha_ingreso: 2025-03-03, jefe: E-301 }
+  - { id: E-001, nombre: Laura Vega, area: Dirección, puesto: Gerente general, rol: gerente, fecha_ingreso: 2015-02-02, jefe: null }
+  - { id: E-101, nombre: Pedro Ramírez, area: Ventas, puesto: Ejecutivo de ventas, rol: ventas, fecha_ingreso: 2021-05-17, jefe: E-001 }
+  - { id: E-102, nombre: Sofía Herrera, area: Ventas, puesto: Ejecutiva de ventas, rol: ventas, fecha_ingreso: 2024-01-08, jefe: E-001 }
+  - { id: E-201, nombre: Ana Torres, area: Recursos Humanos, puesto: Coordinadora de RH, rol: rh, fecha_ingreso: 2019-09-02, jefe: E-001 }
+  - { id: E-301, nombre: Juan Méndez, area: Almacén, puesto: Analista de inventarios, rol: empleado, fecha_ingreso: 2023-08-14, jefe: E-001 }
+  - { id: E-302, nombre: Mariana Cruz, area: Almacén, puesto: Auxiliar de almacén, rol: empleado, fecha_ingreso: 2025-03-03, jefe: E-301 }
