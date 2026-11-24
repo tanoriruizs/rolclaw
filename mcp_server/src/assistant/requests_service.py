@@ -30,6 +30,7 @@ from assistant.flows import (
     validate_data,
 )
 from assistant.flows.calculations import as_date
+from assistant.notifications import RequestNotice, RequestNotifier
 from assistant.servicenow_client import Record, ServiceNowClient
 
 TABLE = "sc_request"
@@ -76,12 +77,18 @@ class RequestSummary(BaseModel):
 
 
 class RequestsService:
-    def __init__(self, company: Company, servicenow: ServiceNowClient) -> None:
+    def __init__(
+        self,
+        company: Company,
+        servicenow: ServiceNowClient,
+        notifier: RequestNotifier,
+    ) -> None:
         self._flows = {flow.id: flow for flow in company.flujos}
         self._employees = {employee.id: employee for employee in company.empleados}
         self._names = {employee.id: employee.nombre for employee in company.empleados}
         self._context = FlowContext.from_company(company)
         self._servicenow = servicenow
+        self._notifier = notifier
 
     async def start(
         self, caller: Caller, flow_id: str, raw: Mapping[str, object]
@@ -109,6 +116,8 @@ class RequestsService:
                 "u_rol_solicitante": caller.role,
             },
         )
+        if status is RequestStatus.PENDIENTE_APROBACION:
+            await self._notifier.pending(self._notice(record))
         return self._summary(record)
 
     async def mine(self, caller: Caller, status: str | None = None) -> list[RequestSummary]:
@@ -153,6 +162,7 @@ class RequestsService:
                 "u_comentario": comment_text,
             },
         )
+        await self._notifier.decided(self._notice(updated))
         return self._summary(updated)
 
     async def _context_for(
@@ -218,6 +228,20 @@ class RequestsService:
             aprueba=record.get("u_aprueba") or None,
             decidida_por=self._names.get(decided_by, decided_by) if decided_by else None,
             comentario=record.get("u_comentario") or None,
+        )
+
+    def _notice(self, record: Record) -> RequestNotice:
+        summary = self._summary(record)
+        return RequestNotice(
+            numero=summary.numero,
+            flujo_nombre=summary.flujo_nombre,
+            solicitante=summary.solicitante,
+            solicitante_id=record.get("u_solicitante_id", ""),
+            rol_solicitante=summary.rol_solicitante,
+            aprueba=summary.aprueba,
+            decidida_por=summary.decidida_por,
+            aprobada=summary.estado is RequestStatus.APROBADA,
+            comentario=summary.comentario,
         )
 
 

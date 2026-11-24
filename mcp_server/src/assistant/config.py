@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     # Valores válidos del header Host en /mcp (protección contra DNS rebinding).
     mcp_allowed_hosts: list[str] = ["127.0.0.1:*", "localhost:*", "mcp-server:*"]
     # Avisos por Telegram (opcionales). Demo: un bot por rol y un solo destinatario.
+    notifications_enabled: bool = True
     telegram_bot_tokens: dict[str, SecretStr] = Field(default_factory=dict)
     telegram_owner_id: str = ""
     # Directorio: un solo bot y un chat por empleado, "E-101:111111,E-001:222222".

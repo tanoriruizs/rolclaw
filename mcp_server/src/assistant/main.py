@@ -18,6 +18,7 @@ from assistant.container import Services, build_services
 from assistant.errors import AssistantError, AuthenticationError
 from assistant.logs import RequestContextMiddleware, configure_logging
 from assistant.mcp_app import build_mcp_server, mcp_endpoint
+from assistant.notifications import Sender
 from assistant.rag import Embedder, ensure_index
 from assistant.rest import api_router, health_router
 from assistant.sandbox_client import SandboxClient
@@ -35,6 +36,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
     await services.servicenow.aclose()
     await services.sandbox.aclose()
+    await services.notices.aclose()
     await services.redis.aclose()
 
 
@@ -45,6 +47,7 @@ def create_app(
     embedder: Embedder | None = None,
     servicenow: ServiceNowClient | None = None,
     sandbox: SandboxClient | None = None,
+    notices: Sender | None = None,
 ) -> FastAPI:
     settings = settings or Settings.from_environ()
     configure_logging(settings.log_level)
@@ -53,7 +56,12 @@ def create_app(
         title="Grupo Cardinal - Asistente por roles", version=__version__, lifespan=lifespan
     )
     services = build_services(
-        settings, redis=redis, embedder=embedder, servicenow=servicenow, sandbox=sandbox
+        settings,
+        redis=redis,
+        embedder=embedder,
+        servicenow=servicenow,
+        sandbox=sandbox,
+        notices=notices,
     )
     app.state.services = services
     app.state.mcp = build_mcp_server(services, settings)

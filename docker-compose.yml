@@ -70,6 +70,13 @@ services:
       SERVICENOW_CLIENT_ID: ${SERVICENOW_CLIENT_ID:-cardinal-assistant}
       SERVICENOW_CLIENT_SECRET: ${SERVICENOW_CLIENT_SECRET:?ejecuta make tokens}
       SANDBOX_SOCKET: /run/sandbox/sandbox.sock
+      # Avisos por Telegram (opcionales): el bot de cada rol le escribe a TELEGRAM_OWNER_ID.
+      NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
+      TELEGRAM_OWNER_ID: ${TELEGRAM_OWNER_ID:-}
+      TELEGRAM_BOT_TOKEN_VENTAS: ${TELEGRAM_BOT_TOKEN_VENTAS:-}
+      TELEGRAM_BOT_TOKEN_RH: ${TELEGRAM_BOT_TOKEN_RH:-}
+      TELEGRAM_BOT_TOKEN_EMPLEADO: ${TELEGRAM_BOT_TOKEN_EMPLEADO:-}
+      TELEGRAM_BOT_TOKEN_GERENTE: ${TELEGRAM_BOT_TOKEN_GERENTE:-}
     volumes:
       - ./empresa:/app/empresa:ro
       - sandbox-socket:/run/sandbox

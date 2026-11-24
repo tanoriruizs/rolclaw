@@ -16,6 +16,7 @@ from pydantic import SecretStr
 from assistant.company import Company, load_company
 from assistant.config import Settings
 from assistant.main import create_app
+from assistant.notifications import Recipient
 from assistant.rag.embeddings import Vectors, normalize
 from assistant.sandbox_client import SandboxClient
 from assistant.servicenow_client import ServiceNowClient
@@ -57,6 +58,24 @@ class HashingEmbedder:
     async def embed_query(self, text: str) -> Vectors:
         query: Vectors = normalize(self._vector(text))[0]
         return query
+
+
+class RecordingSender:
+    """Guarda los avisos en vez de enviarlos: los tests nunca tocan Telegram."""
+
+    def __init__(self) -> None:
+        self.sent: list[tuple[str, str, str]] = []  # (token del bot, chat, texto)
+        self.fail = False
+        self.closed = False
+
+    async def send(self, recipient: Recipient, text: str) -> bool:
+        if self.fail:
+            raise RuntimeError(f"sin red: {recipient.bot_token.get_secret_value()}")
+        self.sent.append((recipient.bot_token.get_secret_value(), recipient.chat_id, text))
+        return True
+
+    async def aclose(self) -> None:
+        self.closed = True
 
 
 @pytest.fixture
@@ -119,11 +138,17 @@ def sandbox(tmp_path: Path) -> SandboxClient:
 
 
 @pytest.fixture
+def notices() -> RecordingSender:
+    return RecordingSender()
+
+
+@pytest.fixture
 def make_app(
     fake_redis: FakeAsyncRedis,
     embedder: HashingEmbedder,
     servicenow: ServiceNowClient,
     sandbox: SandboxClient,
+    notices: RecordingSender,
 ) -> AppFactory:
     """Crea la app con Redis, embeddings y ServiceNow locales: sin red ni modelos."""
     return lambda settings: create_app(
@@ -132,6 +157,7 @@ def make_app(
         embedder=embedder,
         servicenow=servicenow,
         sandbox=sandbox,
+        notices=notices,
     )
 
 

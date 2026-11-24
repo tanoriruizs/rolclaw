@@ -14,6 +14,7 @@ from assistant.company import Company, load_company
 from assistant.config import Settings
 from assistant.errors import ConfigurationError
 from assistant.flows import FlowCatalog
+from assistant.notifications import Contacts, RequestNotifier, Sender, create_sender
 from assistant.permissions import Permissions
 from assistant.rag import Embedder, FastEmbedEmbedder, KnowledgeSearch, VectorStore
 from assistant.requests_service import RequestsService
@@ -35,6 +36,7 @@ class Services:
     servicenow: ServiceNowClient
     requests: RequestsService
     audit: AuditLog
+    notices: Sender
     sandbox: SandboxClient
 
 
@@ -45,14 +47,17 @@ def build_services(
     embedder: Embedder | None = None,
     servicenow: ServiceNowClient | None = None,
     sandbox: SandboxClient | None = None,
+    notices: Sender | None = None,
 ) -> Services:
     """Los clientes externos se pueden inyectar (los tests usan versiones locales)."""
     company = load_company(settings.empresa_dir)
     auth = TokenAuthenticator.from_settings(settings, company)  # primero lo más básico
+    contacts = Contacts(settings, company)
     redis = redis or create_redis(settings)
     embedder = embedder or create_embedder(settings)
     servicenow = servicenow or create_servicenow(settings)
     sandbox = sandbox or create_sandbox(settings)
+    notices = notices or create_sender(contacts)
     store = VectorStore(redis)
     return Services(
         company=company,
@@ -65,8 +70,9 @@ def build_services(
         store=store,
         knowledge=KnowledgeSearch(embedder, store),
         servicenow=servicenow,
-        requests=RequestsService(company, servicenow),
+        requests=RequestsService(company, servicenow, RequestNotifier(contacts, notices)),
         audit=AuditLog(redis),
+        notices=notices,
         sandbox=sandbox,
     )
 

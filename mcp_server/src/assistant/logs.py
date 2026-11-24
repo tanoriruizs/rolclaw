@@ -16,6 +16,10 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 REQUEST_ID_HEADER = "X-Request-ID"
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+# La API de Telegram lleva el token del bot en la URL (/bot<id>:<secreto>/...).
+_BOT_TOKEN = re.compile(r"bot\d+:[A-Za-z0-9_-]+")
+# Clientes HTTP: en INFO registran la URL completa de cada petición.
+_HTTP_CLIENT_LOGGERS = ("httpx2", "httpcore2", "httpx", "httpcore")
 
 request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 logger = logging.getLogger("assistant.http")
@@ -33,7 +37,8 @@ class JsonFormatter(logging.Formatter):
         payload.update(getattr(record, "fields", {}))
         if record.exc_info:
             payload["exc"] = self.formatException(record.exc_info)
-        return json.dumps(payload, ensure_ascii=False, default=str)
+        line = json.dumps(payload, ensure_ascii=False, default=str)
+        return _BOT_TOKEN.sub("bot<oculto>", line)
 
 
 def configure_logging(level: str) -> None:
@@ -44,6 +49,8 @@ def configure_logging(level: str) -> None:
         handler.setFormatter(JsonFormatter())
         root.addHandler(handler)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)  # ya lo registra el middleware
+    for name in _HTTP_CLIENT_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 class RequestContextMiddleware:
