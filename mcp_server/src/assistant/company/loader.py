@@ -7,7 +7,15 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel, ValidationError
 
-from assistant.company.models import Catalog, Company, Document, EmployeesFile, Flow, RolesFile
+from assistant.company.models import (
+    Calendar,
+    Catalog,
+    Company,
+    Document,
+    EmployeesFile,
+    Flow,
+    RolesFile,
+)
 
 FRONT_MATTER_DELIMITER = "---\n"
 
@@ -22,6 +30,7 @@ def load_company(root: Path) -> Company:
         EmployeesFile, _read_yaml(root / "empleados.yaml"), root / "empleados.yaml"
     )
     catalog = _load_model(Catalog, _read_yaml(root / "catalogo.yaml"), root / "catalogo.yaml")
+    calendar = _load_model(Calendar, _read_yaml(root / "calendario.yaml"), root / "calendario.yaml")
     flows = [_load_model(Flow, _read_yaml(p), p) for p in sorted(root.glob("flujos/**/*.yaml"))]
     documents = [_load_document(p) for p in sorted(root.glob("documentos/*.md"))]
 
@@ -29,6 +38,7 @@ def load_company(root: Path) -> Company:
         "roles": roles.roles,
         "catalogo": catalog,
         "empleados": employees.empleados,
+        "calendario": calendar,
         "flujos": flows,
         "documentos": documents,
     }
@@ -70,7 +80,8 @@ def _read_yaml(path: Path) -> object:
 def _parse_yaml(text: str, path: Path) -> object:
     try:
         return yaml.safe_load(text)
-    except yaml.YAMLError as exc:
+    except (yaml.YAMLError, ValueError) as exc:
+        # ValueError: PyYAML lo lanza con fechas imposibles como 2026-13-45.
         raise CompanyConfigError(f"{path}: YAML inválido ({exc})") from exc
 
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Mapping
+from dataclasses import replace
 from datetime import date
 from enum import StrEnum
 
@@ -18,12 +19,22 @@ from pydantic import BaseModel
 
 from assistant.auth import Caller
 from assistant.company import Company, Flow
+from assistant.company.models import Calculated, Calculation
 from assistant.errors import ConflictError, ForbiddenError, InvalidInputError, NotFoundError
-from assistant.flows import FieldValue, Outcome, evaluate
+from assistant.flows import (
+    FieldValue,
+    FlowContext,
+    Outcome,
+    decide,
+    service_year,
+    validate_data,
+)
+from assistant.flows.calculations import as_date
 from assistant.servicenow_client import Record, ServiceNowClient
 
 TABLE = "sc_request"
 MAX_COMMENT_CHARS = 500
+MAX_VACATION_REQUESTS = 500
 # Los valores que se insertan en sysparm_query se validan: así nadie puede inyectar "^campo=...".
 _REQUEST_NUMBER = re.compile(r"^REQ\d{7}$")
 
@@ -67,14 +78,17 @@ class RequestSummary(BaseModel):
 class RequestsService:
     def __init__(self, company: Company, servicenow: ServiceNowClient) -> None:
         self._flows = {flow.id: flow for flow in company.flujos}
+        self._employees = {employee.id: employee for employee in company.empleados}
         self._names = {employee.id: employee.nombre for employee in company.empleados}
+        self._context = FlowContext.from_company(company)
         self._servicenow = servicenow
 
     async def start(
         self, caller: Caller, flow_id: str, raw: Mapping[str, object]
     ) -> RequestSummary:
         flow = self._flow_for(caller, flow_id)
-        decision = evaluate(flow, raw)
+        datos = validate_data(flow, raw, self._context)
+        decision = decide(flow, datos, await self._context_for(caller, flow, datos))
         status = _FROM_OUTCOME[decision.estado]
         approval, state = _SERVICENOW_STATE[status]
         record = await self._servicenow.create(
@@ -140,6 +154,39 @@ class RequestsService:
             },
         )
         return self._summary(updated)
+
+    async def _context_for(
+        self, caller: Caller, flow: Flow, datos: Mapping[str, FieldValue]
+    ) -> FlowContext:
+        """Antigüedad del solicitante y, si el flujo lo usa, sus vacaciones ya pedidas."""
+        hired = self._employees[caller.employee_id].fecha_ingreso
+        used = 0
+        balance = flow.calculation(Calculation.SALDO_VACACIONES)
+        if balance is not None:
+            start = as_date(datos[balance.con["inicio"]])
+            used = await self._vacation_days_used(caller, flow, balance, start)
+        return replace(self._context, fecha_ingreso=hired, dias_vacaciones_usados=used)
+
+    async def _vacation_days_used(
+        self, caller: Caller, flow: Flow, balance: Calculated, start: date
+    ) -> int:
+        """Días de solicitudes vigentes (pendientes o aprobadas) en el mismo año de servicio."""
+        hired = self._employees[caller.employee_id].fecha_ingreso
+        year_start, year_end = service_year(hired, start)
+        query = f"u_solicitante_id={caller.employee_id}^u_flujo={flow.id}"
+        used = 0
+        for record in await self._servicenow.query(TABLE, query, limit=MAX_VACATION_REQUESTS):
+            if record.get("u_estado") == RequestStatus.RECHAZADA:
+                continue
+            datos = json.loads(record.get("u_datos") or "{}")
+            try:
+                requested_start = date.fromisoformat(datos[balance.con["inicio"]])
+                days = int(datos[balance.con["dias"]])
+            except (KeyError, ValueError):
+                continue  # solicitud vieja con otro formato: no cuenta
+            if year_start <= requested_start < year_end:
+                used += days
+        return used
 
     def _flow_for(self, caller: Caller, flow_id: str) -> Flow:
         flow = self._flows.get(flow_id)

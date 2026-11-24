@@ -1,0 +1,30 @@
+# Días de descanso obligatorio (LFT, art. 74): no cuentan como días hábiles.
+dias_festivos:
+  - 2026-01-01
+  - 2026-02-02
+  - 2026-03-16
+  - 2026-05-01
+  - 2026-09-16
+  - 2026-11-16
+  - 2026-12-25
+  - 2027-01-01
+  - 2027-02-01
+  - 2027-03-15
+  - 2027-05-01
+  - 2027-09-16
+  - 2027-11-15
+  - 2027-12-25
+
+# Misma tabla que documentos/politica_vacaciones.md (un test verifica que coincidan).
+vacaciones_por_antiguedad:
+  - { desde: 1, dias: 12 }
+  - { desde: 2, dias: 14 }
+  - { desde: 3, dias: 16 }
+  - { desde: 4, dias: 18 }
+  - { desde: 5, dias: 20 }
+  - { desde: 6, dias: 22 }
+  - { desde: 11, dias: 24 }
+  - { desde: 16, dias: 26 }
+  - { desde: 21, dias: 28 }
+  - { desde: 26, dias: 30 }
+  - { desde: 31, dias: 32 }

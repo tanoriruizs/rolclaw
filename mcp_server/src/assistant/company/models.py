@@ -32,10 +32,44 @@ class FieldType(StrEnum):
     ENTERO = "entero"
     DECIMAL = "decimal"
     FECHA = "fecha"
+    PRODUCTO = "producto"  # un id que debe existir en el catálogo
+    EMPLEADO = "empleado"  # un id que debe existir en empleados.yaml
 
     @property
     def is_numeric(self) -> bool:
         return self in {FieldType.ENTERO, FieldType.DECIMAL}
+
+
+class Calculation(StrEnum):
+    """Valores que calcula el servidor; el agente no los puede enviar."""
+
+    PRECIO_PRODUCTO = "precio_producto"
+    TOTAL_CON_DESCUENTO = "total_con_descuento"
+    DIAS_HABILES = "dias_habiles"
+    DIAS_POR_ANTIGUEDAD = "dias_por_antiguedad"
+    SALDO_VACACIONES = "saldo_vacaciones"
+
+    @property
+    def output(self) -> FieldType:
+        decimals = {Calculation.PRECIO_PRODUCTO, Calculation.TOTAL_CON_DESCUENTO}
+        return FieldType.DECIMAL if self in decimals else FieldType.ENTERO
+
+
+_NUMERIC = frozenset({FieldType.ENTERO, FieldType.DECIMAL})
+_DATE = frozenset({FieldType.FECHA})
+_PRODUCT = frozenset({FieldType.PRODUCTO})
+# Argumentos de cada cálculo: nombre -> tipos de campo que acepta.
+CALCULATION_ARGS: dict[Calculation, dict[str, frozenset[FieldType]]] = {
+    Calculation.PRECIO_PRODUCTO: {"producto": _PRODUCT},
+    Calculation.TOTAL_CON_DESCUENTO: {
+        "producto": _PRODUCT,
+        "cantidad": _NUMERIC,
+        "descuento_pct": _NUMERIC,
+    },
+    Calculation.DIAS_HABILES: {"inicio": _DATE, "fin": _DATE},
+    Calculation.DIAS_POR_ANTIGUEDAD: {"inicio": _DATE},
+    Calculation.SALDO_VACACIONES: {"inicio": _DATE, "dias": _NUMERIC},
+}
 
 
 class RuleAction(StrEnum):
@@ -93,6 +127,31 @@ class EmployeesFile(_Model):
     empleados: tuple[Employee, ...] = Field(min_length=1)
 
 
+class VacationTier(_Model):
+    desde: int = Field(ge=1)  # años de servicio cumplidos
+    dias: int = Field(ge=0)
+
+
+class Calendar(_Model):
+    dias_festivos: frozenset[date] = frozenset()
+    vacaciones_por_antiguedad: tuple[VacationTier, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _tiers_in_order(self) -> Self:
+        years = [tier.desde for tier in self.vacaciones_por_antiguedad]
+        if years != sorted(set(years)):
+            raise ValueError("vacaciones_por_antiguedad debe ir en orden y sin repetir 'desde'")
+        return self
+
+    def vacation_days(self, years_of_service: int) -> int:
+        """Días que corresponden con esos años cumplidos (0 si aún no cumple el primero)."""
+        days = 0
+        for tier in self.vacaciones_por_antiguedad:
+            if years_of_service >= tier.desde:
+                days = tier.dias
+        return days
+
+
 class RequiredField(_Model):
     campo: Identifier
     tipo: FieldType
@@ -132,26 +191,60 @@ class Rule(_Model):
         return self
 
 
+class Calculated(_Model):
+    campo: Identifier
+    calculo: Calculation
+    con: dict[Identifier, Identifier]  # argumento del cálculo -> campo del flujo
+
+    @model_validator(mode="after")
+    def _check_arguments(self) -> Self:
+        expected = set(CALCULATION_ARGS[self.calculo])
+        if set(self.con) != expected:
+            raise ValueError(
+                f"'{self.campo}': el cálculo {self.calculo} necesita 'con' {sorted(expected)}"
+            )
+        return self
+
+
 class Flow(_Model):
     id: Identifier
     nombre: str
     roles: frozenset[Identifier] = Field(min_length=1)
     descripcion: str
     datos_requeridos: tuple[RequiredField, ...] = Field(min_length=1)
+    calculados: tuple[Calculated, ...] = ()
     pasos: tuple[str, ...] = Field(min_length=1)
     reglas: tuple[Rule, ...] = ()
 
     @model_validator(mode="after")
-    def _check_rules_use_known_numeric_fields(self) -> Self:
-        _ensure_unique((d.campo for d in self.datos_requeridos), "campo")
+    def _check_fields(self) -> Self:
+        fields = [d.campo for d in self.datos_requeridos] + [c.campo for c in self.calculados]
+        _ensure_unique(fields, "campo")
         types = {d.campo: d.tipo for d in self.datos_requeridos}
+        # Cada cálculo solo puede usar campos definidos antes que él.
+        for calculated in self.calculados:
+            for argument, field in calculated.con.items():
+                field_type = types.get(field)
+                if field_type is None:
+                    raise ValueError(
+                        f"'{calculated.campo}' usa '{field}', que no está definido antes"
+                    )
+                if field_type not in CALCULATION_ARGS[calculated.calculo][argument]:
+                    raise ValueError(
+                        f"'{calculated.campo}': '{field}' no sirve como '{argument}' "
+                        f"(es de tipo {field_type})"
+                    )
+            types[calculated.campo] = calculated.calculo.output
         for rule in self.reglas:
             field_type = types.get(rule.campo)
             if field_type is None:
-                raise ValueError(f"la regla usa '{rule.campo}', que no está en datos_requeridos")
+                raise ValueError(f"la regla usa '{rule.campo}', que no es un campo del flujo")
             if not field_type.is_numeric:
                 raise ValueError(f"la regla de '{rule.campo}' necesita un campo numérico")
         return self
+
+    def calculation(self, kind: Calculation) -> Calculated | None:
+        return next((c for c in self.calculados if c.calculo is kind), None)
 
 
 class Document(_Model):
@@ -165,6 +258,7 @@ class Company(_Model):
     roles: dict[Identifier, Role]
     catalogo: Catalog
     empleados: tuple[Employee, ...]
+    calendario: Calendar
     flujos: tuple[Flow, ...]
     documentos: tuple[Document, ...]
 

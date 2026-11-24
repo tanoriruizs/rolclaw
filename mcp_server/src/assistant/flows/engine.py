@@ -1,7 +1,7 @@
-"""Motor de flujos: valida los datos de una solicitud y aplica las reglas del YAML.
+"""Motor de flujos: valida los datos de una solicitud, calcula y aplica las reglas del YAML.
 
-Es una función pura (sin red ni base de datos): recibe el flujo y los datos y
-devuelve la decisión. Las reglas se evalúan en el servidor; el modelo no decide.
+Es puro (sin red ni base de datos): recibe el flujo, los datos y el contexto de la empresa,
+y devuelve la decisión. Todo se decide en el servidor; el modelo no decide ni calcula.
 """
 
 from __future__ import annotations
@@ -16,11 +16,10 @@ from enum import StrEnum
 from assistant.company import FieldType, Flow, Rule, RuleAction
 from assistant.company.models import RequiredField
 from assistant.errors import InvalidInputError
+from assistant.flows.calculations import CALCULATIONS, FieldValue, FlowContext
 
 MAX_TEXT_CHARS = 500
 _INTEGER = re.compile(r"^-?\d+$")
-
-FieldValue = str | int | Decimal | date
 
 
 class Outcome(StrEnum):
@@ -37,14 +36,24 @@ class Decision:
     datos: dict[str, FieldValue]
 
 
-def evaluate(flow: Flow, raw: Mapping[str, object]) -> Decision:
-    return apply_rules(flow, validate_data(flow, raw))
+def evaluate(flow: Flow, raw: Mapping[str, object], context: FlowContext) -> Decision:
+    return decide(flow, validate_data(flow, raw, context), context)
 
 
-def validate_data(flow: Flow, raw: Mapping[str, object]) -> dict[str, FieldValue]:
+def decide(flow: Flow, datos: Mapping[str, FieldValue], context: FlowContext) -> Decision:
+    return apply_rules(flow, compute(flow, datos, context))
+
+
+def validate_data(
+    flow: Flow, raw: Mapping[str, object], context: FlowContext
+) -> dict[str, FieldValue]:
     """Convierte y valida cada dato; reporta TODOS los problemas juntos."""
     problems: list[str] = []
-    unknown = sorted(set(raw) - {f.campo for f in flow.datos_requeridos})
+    calculated = {c.campo for c in flow.calculados}
+    sent_calculated = sorted(set(raw) & calculated)
+    if sent_calculated:
+        problems.append(f"no envíes {', '.join(sent_calculated)}: lo calcula el servidor")
+    unknown = sorted(set(raw) - {f.campo for f in flow.datos_requeridos} - calculated)
     if unknown:
         problems.append(f"campos desconocidos: {', '.join(unknown)}")
 
@@ -55,13 +64,24 @@ def validate_data(flow: Flow, raw: Mapping[str, object]) -> dict[str, FieldValue
             problems.append(f"falta '{field.campo}'")
             continue
         try:
-            datos[field.campo] = _convert(field, value)
+            datos[field.campo] = _convert(field, value, context)
         except ValueError as exc:
             problems.append(f"'{field.campo}' {exc}")
 
     if problems:
         raise InvalidInputError(f"Datos inválidos: {'; '.join(problems)}.")
     return datos
+
+
+def compute(
+    flow: Flow, datos: Mapping[str, FieldValue], context: FlowContext
+) -> dict[str, FieldValue]:
+    """Agrega los campos calculados, en el orden en que aparecen en el flujo."""
+    values = dict(datos)
+    for calculated in flow.calculados:
+        arguments = {name: values[field] for name, field in calculated.con.items()}
+        values[calculated.campo] = CALCULATIONS[calculated.calculo](context, arguments)
+    return values
 
 
 def apply_rules(flow: Flow, datos: Mapping[str, FieldValue]) -> Decision:
@@ -83,11 +103,15 @@ def apply_rules(flow: Flow, datos: Mapping[str, FieldValue]) -> Decision:
     )
 
 
-def _convert(field: RequiredField, value: object) -> FieldValue:
+def _convert(field: RequiredField, value: object, context: FlowContext) -> FieldValue:
     if field.tipo is FieldType.TEXTO:
         return _to_text(value)
     if field.tipo is FieldType.FECHA:
         return _to_date(value)
+    if field.tipo is FieldType.PRODUCTO:
+        return _to_known_id(value, context.precios, "no existe en el catálogo")
+    if field.tipo is FieldType.EMPLEADO:
+        return _to_known_id(value, context.empleados, "no es un número de empleado válido")
     number = _to_int(value) if field.tipo is FieldType.ENTERO else _to_decimal(value)
     if field.min is not None and number < field.min:
         raise ValueError(f"debe ser mayor o igual a {field.min}")
@@ -103,6 +127,13 @@ def _to_text(value: object) -> str:
     if len(text) > MAX_TEXT_CHARS:
         raise ValueError(f"debe tener como máximo {MAX_TEXT_CHARS} caracteres")
     return text
+
+
+def _to_known_id(value: object, known: Mapping[str, object] | frozenset[str], problem: str) -> str:
+    identifier = _to_text(value).upper()
+    if identifier not in known:
+        raise ValueError(problem)
+    return identifier
 
 
 def _to_int(value: object) -> int:

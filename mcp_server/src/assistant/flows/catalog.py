@@ -19,6 +19,7 @@ class FlowSummary(BaseModel):
 
 class FlowDetail(FlowSummary):
     datos_requeridos: tuple[RequiredField, ...]
+    calculados_por_el_servidor: list[str]
     pasos: tuple[str, ...]
     reglas: list[str]
 
@@ -44,6 +45,8 @@ class FlowCatalog:
             nombre=flow.nombre,
             descripcion=flow.descripcion,
             datos_requeridos=flow.datos_requeridos,
+            # El agente no debe enviar estos campos: los calcula el servidor.
+            calculados_por_el_servidor=[c.campo for c in flow.calculados],
             pasos=flow.pasos,
             reglas=[describe_rule(rule) for rule in flow.reglas],
         )

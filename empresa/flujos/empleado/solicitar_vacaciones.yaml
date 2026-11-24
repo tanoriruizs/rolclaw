@@ -5,10 +5,17 @@ descripcion: Solicita un periodo de vacaciones; siempre requiere aprobación de 
 datos_requeridos:
   - { campo: fecha_inicio, tipo: fecha }
   - { campo: fecha_fin, tipo: fecha }
-  - { campo: dias_habiles, tipo: entero, min: 1 }
+# El servidor cuenta los días hábiles (sin fines de semana ni festivos) y revisa el saldo.
+calculados:
+  - { campo: dias_habiles, calculo: dias_habiles, con: { inicio: fecha_inicio, fin: fecha_fin } }
+  - { campo: dias_por_antiguedad, calculo: dias_por_antiguedad, con: { inicio: fecha_inicio } }
+  - { campo: dias_restantes, calculo: saldo_vacaciones, con: { inicio: fecha_inicio, dias: dias_habiles } }
 pasos:
   - Consultar en la política de vacaciones cuántos días corresponden por antigüedad
-  - Calcular los días hábiles del periodo usando la herramienta calcular
-  - Crear la solicitud, que queda pendiente de aprobación
+  - Pedir la fecha de inicio y la fecha de fin
+  - Crear la solicitud; el servidor calcula los días hábiles y revisa que alcancen
+  - La solicitud queda pendiente de aprobación
 reglas:
+  - { campo: dias_habiles, menor_que: 1, accion: rechazar, mensaje: "El periodo no incluye días hábiles." }
+  - { campo: dias_restantes, menor_que: 0, accion: rechazar, mensaje: "No tienes días de vacaciones suficientes para ese periodo." }
   - { campo: dias_habiles, mayor_que: 0, accion: requiere_aprobacion, aprueba: gerente }

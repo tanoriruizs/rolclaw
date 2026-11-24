@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -111,4 +112,59 @@ def test_duplicate_flow_ids_are_rejected(empresa_copy: Path) -> None:
     (empresa_copy / "flujos" / "ventas" / "copia.yaml").write_text(source.read_text("utf-8"))
 
     with pytest.raises(CompanyConfigError, match="flujo duplicado"):
+        load_company(empresa_copy)
+
+
+def test_vacation_table_matches_the_policy_document(company: Company) -> None:
+    """La tabla que usa el servidor y la que lee el agente no pueden decir cosas distintas."""
+    policy = next(d for d in company.documentos if d.archivo == "politica_vacaciones.md")
+    rows = re.findall(r"^\| (\d+)(?: a \d+)? \| (\d+) \|$", policy.contenido, re.MULTILINE)
+    documented = {int(years): int(days) for years, days in rows}
+
+    assert len(documented) == 9
+    for years, days in documented.items():
+        assert company.calendario.vacation_days(years) == days, years
+    # "A partir del año 26, se suman 2 días por cada 5 años de servicio adicionales."
+    assert company.calendario.vacation_days(26) == 30
+    assert company.calendario.vacation_days(31) == 32
+
+
+def test_holidays_are_real_dates_and_never_on_weekends_by_mistake(company: Company) -> None:
+    holidays = company.calendario.dias_festivos
+
+    assert date(2026, 12, 25) in holidays
+    assert date(2026, 11, 16) in holidays
+    assert {h.year for h in holidays} == {2026, 2027}
+    assert len(holidays) == 14
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "expected"),
+    [
+        ("  - 2026-12-25", "  - 2026-13-45", "calendario.yaml"),
+        ("  - { desde: 2, dias: 14 }", "  - { desde: 1, dias: 14 }", "en orden"),
+        ("  - { desde: 3, dias: 16 }", "  - { desde: 3, dias: -1 }", "calendario.yaml"),
+    ],
+)
+def test_invalid_calendar_is_rejected(
+    empresa_copy: Path, old: str, new: str, expected: str
+) -> None:
+    _replace(empresa_copy / "calendario.yaml", old, new)
+
+    with pytest.raises(CompanyConfigError, match=expected):
+        load_company(empresa_copy)
+
+
+def test_missing_calendar_is_reported(empresa_copy: Path) -> None:
+    (empresa_copy / "calendario.yaml").unlink()
+
+    with pytest.raises(CompanyConfigError, match=r"calendario\.yaml: el archivo no existe"):
+        load_company(empresa_copy)
+
+
+def test_a_flow_cannot_reference_an_unknown_calculation(empresa_copy: Path) -> None:
+    flow = empresa_copy / "flujos" / "empleado" / "solicitar_vacaciones.yaml"
+    _replace(flow, "calculo: dias_por_antiguedad", "calculo: dias_magicos")
+
+    with pytest.raises(CompanyConfigError, match=r"solicitar_vacaciones\.yaml"):
         load_company(empresa_copy)

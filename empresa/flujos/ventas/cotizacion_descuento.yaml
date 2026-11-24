@@ -4,13 +4,20 @@ roles: [ventas]
 descripcion: Cotiza productos del catálogo aplicando un descuento.
 datos_requeridos:
   - { campo: cliente, tipo: texto }
-  - { campo: producto_id, tipo: texto }
+  - { campo: producto_id, tipo: producto }
   - { campo: cantidad, tipo: entero, min: 1 }
   - { campo: descuento_pct, tipo: decimal, min: 0, max: 100 }
+# El precio y el total los calcula el servidor con el catálogo; el agente no los envía.
+calculados:
+  - { campo: precio_unitario, calculo: precio_producto, con: { producto: producto_id } }
+  - campo: total
+    calculo: total_con_descuento
+    con: { producto: producto_id, cantidad: cantidad, descuento_pct: descuento_pct }
 pasos:
   - Verificar que el cliente exista o darlo de alta
   - Obtener el id y el precio del producto con la herramienta consultar_catalogo
-  - Calcular el total con descuento usando la herramienta calcular
+  - Calcular el total con descuento usando la herramienta calcular y mostrarlo al usuario
+  - Crear la solicitud; el total oficial es el que devuelve el servidor
   - Si el descuento supera el límite, la solicitud queda pendiente de aprobación
 reglas:
   - { campo: descuento_pct, mayor_que: 25, accion: rechazar, mensaje: "El descuento máximo permitido es 25%." }
