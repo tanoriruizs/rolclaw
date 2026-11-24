@@ -12,6 +12,9 @@ for dir in "$SRC"/agentes/*/; do
   mkdir -p "$STATE/workspace-$role"
   install -m 644 "$SRC/agentes/AGENTS.md" "$STATE/workspace-$role/AGENTS.md"
   install -m 644 "$dir/SOUL.md" "$STATE/workspace-$role/SOUL.md"
+  if [ -f "$dir/USER.md" ]; then
+    install -m 644 "$dir/USER.md" "$STATE/workspace-$role/USER.md"
+  fi
 done
 mkdir -p "$STATE/credentials"
 chmod 700 "$STATE/credentials"

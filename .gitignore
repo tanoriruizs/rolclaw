@@ -30,3 +30,4 @@ Thumbs.db
 # Datos locales
 data/
 openclaw/state/
+openclaw/local/

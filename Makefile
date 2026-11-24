@@ -2,8 +2,8 @@
 UV := uv
 COMPOSE := docker compose
 
-.PHONY: help setup tokens up reload pairing demo-reset down logs ps ingest sandbox-check run \
-	lint format test secrets ci
+.PHONY: help setup tokens validate new-role openclaw-config up reload pairing demo-reset \
+	down logs ps ingest sandbox-check run lint format test secrets ci
 
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -15,6 +15,15 @@ setup: ## Instala dependencias y los hooks de pre-commit (para desarrollar)
 
 tokens: ## Genera tokens de rol y secretos locales en .env (solo necesita python3)
 	python3 scripts/gen_tokens.py
+
+validate: ## Revisa empresa/ y lo que depende de ella, sin levantar nada
+	$(UV) run python -m assistant.admin validar
+
+new-role: ## Crea un rol: make new-role ROL=compras NOMBRE="Compras" PERSONA="Carla Ríos"
+	$(UV) run python -m assistant.admin nuevo-rol "$(ROL)" --nombre "$(NOMBRE)" --persona "$(PERSONA)"
+
+openclaw-config: ## Regenera openclaw/openclaw.json5 a partir de empresa/
+	$(UV) run python -m assistant.admin openclaw
 
 up: ## Construye y levanta los servicios; espera a que estén sanos
 	$(COMPOSE) up -d --build --wait redis servicenow-mock sandbox mcp-server
@@ -70,4 +79,4 @@ test: ## Tests con cobertura (mínimo 80 %)
 secrets: ## Busca secretos en todo el repo con gitleaks
 	$(UV) run pre-commit run gitleaks --all-files
 
-ci: lint test secrets ## Lo mismo que corre GitHub Actions
+ci: lint test validate secrets ## Lo mismo que corre GitHub Actions

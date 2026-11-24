@@ -1,0 +1,101 @@
+// Configuración de OpenClaw para Grupo Cardinal. Sin secretos: todos vienen del entorno.
+// Cada agente solo puede usar su propio servidor MCP; el servidor decide qué puede hacer.
+{
+  // Migraciones que `openclaw doctor` ya aplicó a esta versión (el archivo es de solo lectura).
+  meta: {
+    migrations: { webhookListeners: true, modelPolicyAllowlist: true, utilityModelSeparation: true },
+    lastTouchedVersion: "2026.11.6",
+  },
+
+  plugins: {
+    entries: {
+      anthropic: { enabled: true },
+      // Lo que no se usa no se carga: menos superficie de ataque.
+      canvas: { enabled: false },
+      browser: { enabled: false },
+      "cua-computer": { enabled: false },
+      "file-transfer": { enabled: false },
+      geolocation: { enabled: false },
+      github: { enabled: false },
+      "linux-node": { enabled: false },
+      ollama: { enabled: false },
+      "talk-voice": { enabled: false },
+      xai: { enabled: false },
+    },
+  },
+
+  gateway: {
+    mode: "local",
+    port: 18789,
+    bind: "lan", // dentro del contenedor; compose publica el puerto solo en 127.0.0.1
+    auth: {
+      mode: "token",
+      token: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" },
+      // Contra fuerza bruta: 10 intentos por minuto y luego 5 minutos de bloqueo.
+      rateLimit: { maxAttempts: 10, windowMs: 60000, lockoutMs: 300000 },
+    },
+    // El panel web solo se acepta desde la máquina local.
+    controlUi: {
+      allowedOrigins: [
+        "http://127.0.0.1:${OPENCLAW_PORT}",
+        "http://localhost:${OPENCLAW_PORT}",
+      ],
+    },
+  },
+
+  // Sin tareas automáticas: el agente solo actúa cuando alguien le escribe.
+  cron: { enabled: false },
+
+  // Sin aprendizaje autónomo (por defecto "auto") ni navegador: comportamiento predecible.
+  skills: {
+    workshop: { autonomous: { mode: "off" } },
+    entries: {
+      "openai-whisper-api": { enabled: false },
+      "sherpa-onnx-tts": { enabled: false },
+    },
+  },
+  browser: { enabled: false, extensionRelay: { allowLegacyAuth: false } },
+
+  // Mismo servidor MCP con un token distinto por agente: el servidor deduce de ese token
+  // quién llama y qué rol tiene.
+  mcp: {
+    servers: __SERVIDORES_MCP__,
+  },
+
+  // Nada de herramientas propias de OpenClaw (shell, archivos, web, navegador...).
+  tools: {
+    deny: [
+      "group:runtime",
+      "group:fs",
+      "group:web",
+      "group:ui",
+      "group:automation",
+      "group:nodes",
+      "group:messaging",
+    ],
+    swarm: false,
+    elevated: { enabled: false },
+    // Ningún agente puede leer ni escribir en conversaciones de otro (lo detectó el audit).
+    sessions: { visibility: "self" },
+    agentToAgent: { enabled: false },
+  },
+
+  agents: {
+    ownership: "explicit",
+    defaults: {
+      model: "${OPENCLAW_MODEL}",
+      // Tareas internas de OpenClaw: un agente aparte, sin herramientas ni bot.
+      systemAgent: { agentId: "sistema" },
+    },
+    // Cada agente solo tiene permitidas las herramientas de su servidor MCP.
+    entries: __AGENTES__,
+  },
+
+  // Telegram. Nadie habla con un bot sin estar autorizado (pairing o lista de permitidos).
+  channels: {
+    telegram: __TELEGRAM__,
+  },
+
+  // Qué agente atiende cada conversación.
+  bindings: __BINDINGS__,
+}

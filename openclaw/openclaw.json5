@@ -1,5 +1,7 @@
+// GENERADO con `make openclaw-config` a partir de openclaw.plantilla.json5 y empresa/.
+// No lo edites a mano: cambia la plantilla o empresa/ y vuelve a generarlo.
 // Configuración de OpenClaw para Grupo Cardinal. Sin secretos: todos vienen del entorno.
-// Un agente por rol; cada agente solo puede usar el servidor MCP de su rol.
+// Cada agente solo puede usar su propio servidor MCP; el servidor decide qué puede hacer.
 {
   // Migraciones que `openclaw doctor` ya aplicó a esta versión (el archivo es de solo lectura).
   meta: {
@@ -56,29 +58,38 @@
   },
   browser: { enabled: false, extensionRelay: { allowLegacyAuth: false } },
 
-  // Mismo servidor MCP, un token distinto por rol: el servidor deduce el rol del token.
+  // Mismo servidor MCP con un token distinto por agente: el servidor deduce de ese token
+  // quién llama y qué rol tiene.
   mcp: {
     servers: {
       "cardinal-ventas": {
-        url: "http://mcp-server:8000/mcp",
-        transport: "streamable-http",
-        headers: { Authorization: "Bearer ${ROLE_TOKEN_VENTAS}" },
+        "url": "http://mcp-server:8000/mcp",
+        "transport": "streamable-http",
+        "headers": {
+          "Authorization": "Bearer ${ROLE_TOKEN_VENTAS}"
+        }
       },
       "cardinal-rh": {
-        url: "http://mcp-server:8000/mcp",
-        transport: "streamable-http",
-        headers: { Authorization: "Bearer ${ROLE_TOKEN_RH}" },
+        "url": "http://mcp-server:8000/mcp",
+        "transport": "streamable-http",
+        "headers": {
+          "Authorization": "Bearer ${ROLE_TOKEN_RH}"
+        }
       },
       "cardinal-empleado": {
-        url: "http://mcp-server:8000/mcp",
-        transport: "streamable-http",
-        headers: { Authorization: "Bearer ${ROLE_TOKEN_EMPLEADO}" },
+        "url": "http://mcp-server:8000/mcp",
+        "transport": "streamable-http",
+        "headers": {
+          "Authorization": "Bearer ${ROLE_TOKEN_EMPLEADO}"
+        }
       },
       "cardinal-gerente": {
-        url: "http://mcp-server:8000/mcp",
-        transport: "streamable-http",
-        headers: { Authorization: "Bearer ${ROLE_TOKEN_GERENTE}" },
-      },
+        "url": "http://mcp-server:8000/mcp",
+        "transport": "streamable-http",
+        "headers": {
+          "Authorization": "Bearer ${ROLE_TOKEN_GERENTE}"
+        }
+      }
     },
   },
 
@@ -107,63 +118,123 @@
       // Tareas internas de OpenClaw: un agente aparte, sin herramientas ni bot.
       systemAgent: { agentId: "sistema" },
     },
+    // Cada agente solo tiene permitidas las herramientas de su servidor MCP.
     entries: {
-      sistema: {
-        name: "Sistema",
-        workspace: "/home/node/.openclaw/workspace-sistema",
-        tools: { allow: [] },
+      "sistema": {
+        "name": "Sistema",
+        "workspace": "/home/node/.openclaw/workspace-sistema",
+        "tools": {
+          "allow": []
+        }
       },
-      ventas: {
-        name: "Ventas",
-        workspace: "/home/node/.openclaw/workspace-ventas",
-        tools: { allow: ["cardinal-ventas__*"] },
+      "ventas": {
+        "name": "Ventas",
+        "workspace": "/home/node/.openclaw/workspace-ventas",
+        "tools": {
+          "allow": [
+            "cardinal-ventas__*"
+          ]
+        }
       },
-      rh: {
-        name: "Recursos Humanos",
-        workspace: "/home/node/.openclaw/workspace-rh",
-        tools: { allow: ["cardinal-rh__*"] },
+      "rh": {
+        "name": "Recursos Humanos",
+        "workspace": "/home/node/.openclaw/workspace-rh",
+        "tools": {
+          "allow": [
+            "cardinal-rh__*"
+          ]
+        }
       },
-      empleado: {
-        name: "Colaborador",
-        workspace: "/home/node/.openclaw/workspace-empleado",
-        tools: { allow: ["cardinal-empleado__*"] },
+      "empleado": {
+        "name": "Empleado",
+        "workspace": "/home/node/.openclaw/workspace-empleado",
+        "tools": {
+          "allow": [
+            "cardinal-empleado__*"
+          ]
+        }
       },
-      gerente: {
-        name: "Gerencia",
-        workspace: "/home/node/.openclaw/workspace-gerente",
-        tools: { allow: ["cardinal-gerente__*"] },
-      },
+      "gerente": {
+        "name": "Gerencia",
+        "workspace": "/home/node/.openclaw/workspace-gerente",
+        "tools": {
+          "allow": [
+            "cardinal-gerente__*"
+          ]
+        }
+      }
     },
   },
 
-  // Un bot de Telegram por rol. dmPolicy "pairing": nadie habla con un bot sin aprobación.
+  // Telegram. Nadie habla con un bot sin estar autorizado (pairing o lista de permitidos).
   channels: {
     telegram: {
-      enabled: true,
-      dmPolicy: "pairing",
-      configWrites: false,
-      defaultAccount: "ventas",
-      accounts: {
-        ventas: {
-          botToken: { source: "env", provider: "default", id: "TELEGRAM_BOT_TOKEN_VENTAS" },
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "configWrites": false,
+      "defaultAccount": "ventas",
+      "accounts": {
+        "ventas": {
+          "botToken": {
+            "source": "env",
+            "provider": "default",
+            "id": "TELEGRAM_BOT_TOKEN_VENTAS"
+          }
         },
-        rh: {
-          botToken: { source: "env", provider: "default", id: "TELEGRAM_BOT_TOKEN_RH" },
+        "rh": {
+          "botToken": {
+            "source": "env",
+            "provider": "default",
+            "id": "TELEGRAM_BOT_TOKEN_RH"
+          }
         },
-        empleado: {
-          botToken: { source: "env", provider: "default", id: "TELEGRAM_BOT_TOKEN_EMPLEADO" },
+        "empleado": {
+          "botToken": {
+            "source": "env",
+            "provider": "default",
+            "id": "TELEGRAM_BOT_TOKEN_EMPLEADO"
+          }
         },
-        gerente: {
-          botToken: { source: "env", provider: "default", id: "TELEGRAM_BOT_TOKEN_GERENTE" },
-        },
-      },
+        "gerente": {
+          "botToken": {
+            "source": "env",
+            "provider": "default",
+            "id": "TELEGRAM_BOT_TOKEN_GERENTE"
+          }
+        }
+      }
     },
   },
 
+  // Qué agente atiende cada conversación.
   bindings: [
-    { agentId: "ventas", match: { channel: "telegram", accountId: "ventas" } },
-    { agentId: "rh", match: { channel: "telegram", accountId: "rh" } },
-    { agentId: "empleado", match: { channel: "telegram", accountId: "empleado" } },
-    { agentId: "gerente", match: { channel: "telegram", accountId: "gerente" } },
+    {
+      "agentId": "ventas",
+      "match": {
+        "channel": "telegram",
+        "accountId": "ventas"
+      }
+    },
+    {
+      "agentId": "rh",
+      "match": {
+        "channel": "telegram",
+        "accountId": "rh"
+      }
+    },
+    {
+      "agentId": "empleado",
+      "match": {
+        "channel": "telegram",
+        "accountId": "empleado"
+      }
+    },
+    {
+      "agentId": "gerente",
+      "match": {
+        "channel": "telegram",
+        "accountId": "gerente"
+      }
+    }
   ],
 }

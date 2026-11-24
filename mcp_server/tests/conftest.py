@@ -1,9 +1,11 @@
+import json
 import re
 import shutil
 import unicodedata
 import zlib
 from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
+from typing import Any
 
 import httpx2
 import numpy as np
@@ -25,7 +27,8 @@ from sandbox_runner.executor import Executor
 from servicenow_mock.main import MockSettings
 from servicenow_mock.main import create_app as create_servicenow_mock
 
-EMPRESA_DIR = Path(__file__).resolve().parents[2] / "empresa"
+REPO = Path(__file__).resolve().parents[2]
+EMPRESA_DIR = REPO / "empresa"
 SERVICENOW_SECRET = "secreto-de-servicenow-de-prueba"
 DIRECTORY_SECRET = "secreto-del-directorio-de-prueba-" + "0" * 16
 ROLE_TOKENS = {
@@ -89,6 +92,27 @@ def empresa_copy(tmp_path: Path) -> Path:
     destination = tmp_path / "empresa"
     shutil.copytree(EMPRESA_DIR, destination)
     return destination
+
+
+@pytest.fixture
+def repo_copy(tmp_path: Path) -> Path:
+    """Copia de lo que tocan las herramientas de administración (sin .env ni código)."""
+    destination = tmp_path / "repo"
+    for folder in ("empresa", "openclaw"):
+        shutil.copytree(REPO / folder, destination / folder, ignore=shutil.ignore_patterns("local"))
+    for name in (".env.example", "docker-compose.yml", ".github/workflows/ci.yml"):
+        (destination / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO / name, destination / name)
+    return destination
+
+
+def parse_json5(text: str) -> Any:
+    """Lector mínimo del JSON5 de OpenClaw: comentarios, claves sin comillas y comas finales."""
+    text = re.sub(r"^\s*//.*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\s+//[^\"\n]*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"([{,]\s*)([A-Za-z_][\w-]*)\s*:", r'\1"\2":', text)
+    text = re.sub(r",(\s*[}\]])", r"\1", text)
+    return json.loads(text)
 
 
 @pytest.fixture
