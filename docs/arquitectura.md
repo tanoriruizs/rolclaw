@@ -96,3 +96,39 @@ sequenceDiagram
 | `audit:events` | Bitácora de auditoría, Redis Stream (db 0) |
 | `sn:token:<hash>` | Tokens OAuth del ServiceNow simulado, con TTL (db 1) |
 | `sn:sc_request:*` | Solicitudes del ServiceNow simulado (db 1) |
+
+## Lo que el servidor decide sin el modelo
+
+| Qué | Dónde | De dónde sale |
+|---|---|---|
+| Quién llama y qué rol tiene | `auth.py` | El token: por rol (demo) o por persona (directorio) |
+| Qué herramientas existen para esa persona | `permissions.py` | `roles.yaml` |
+| Qué documentos entran a la búsqueda | `rag/` | Encabezado `roles` de cada documento |
+| Precio, total, días hábiles y saldo | `flows/calculations.py` | Catálogo, calendario, empleados y solicitudes previas |
+| Estado de la solicitud y quién aprueba | `flows/engine.py` | Reglas del flujo |
+| A quién se le avisa | `notifications.py` | Rol que aprueba y solicitante |
+
+## Los dos modos
+
+```mermaid
+flowchart LR
+    subgraph Demo
+        B1["Bot Ventas"] --> A1["Agente ventas"] -- "token del rol" --> S1["Servidor"]
+    end
+    subgraph Directorio
+        B2["Un solo bot"] -- "chat de Sofía" --> A2["Agente e-102"] -- "token de Sofía" --> S2["Servidor"]
+        B2 -- "chat de Pedro" --> A3["Agente e-101"] -- "token de Pedro" --> S2
+    end
+```
+
+`openclaw/openclaw.json5` (demo) y `openclaw/local/` (directorio) se **generan** desde
+`empresa/` con `assistant.admin`; `start.sh` elige cuál copiar según `AUTH_MODE`.
+
+## Herramientas de la plantilla
+
+| Comando | Qué hace | Código |
+|---|---|---|
+| `make validate` | Revisa `empresa/` y que agentes, variables y config estén al día | `admin/validation.py` |
+| `make new-role` | Crea un rol en todos los archivos (sobre una copia; solo escribe si valida) | `admin/scaffold.py` |
+| `make openclaw-config` / `make directorio` | Genera la config de OpenClaw | `admin/openclaw_config.py` |
+| `make eval` | Conversa con los agentes y juzga por los hechos del servidor | `scripts/run_evals.py` |

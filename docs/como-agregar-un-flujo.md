@@ -33,13 +33,39 @@ reglas:
 | `entero` | Número entero (también `"50"`) | `50` |
 | `decimal` | Número con decimales (también `"12.5"`) | `12.5` |
 | `fecha` | Fecha ISO | `2026-12-14` |
+| `producto` | Un id que exista en `catalogo.yaml` | `LAP-001` |
+| `empleado` | Un id que exista en `empleados.yaml` | `E-301` |
 
 `min` y `max` solo aplican a `entero` y `decimal`. Faltantes, tipos incorrectos o campos
 desconocidos se reportan **todos juntos** para que el agente pregunte lo que falta.
 
-## 3. Reglas
+## 3. Valores que calcula el servidor
 
-Cada regla usa **una** condición sobre un campo numérico: `mayor_que` o `menor_que`.
+El agente no envía totales ni días: los declara el flujo en `calculados` y los pone el
+servidor. Si el agente los manda, la solicitud se rechaza.
+
+```yaml
+calculados:
+  - { campo: precio_unitario, calculo: precio_producto, con: { producto: producto_id } }
+  - campo: total
+    calculo: total_con_descuento
+    con: { producto: producto_id, cantidad: cantidad, descuento_pct: descuento_pct }
+```
+
+| `calculo` | Argumentos (`con`) | Resultado |
+|---|---|---|
+| `precio_producto` | `producto` | Precio del catálogo |
+| `total_con_descuento` | `producto`, `cantidad`, `descuento_pct` | Total con 2 decimales |
+| `dias_habiles` | `inicio`, `fin` | Días sin fines de semana ni festivos (`calendario.yaml`) |
+| `dias_por_antiguedad` | `inicio` | Días de vacaciones que le tocan a quien solicita |
+| `saldo_vacaciones` | `inicio`, `dias` | Días que le quedarían en su año de servicio |
+
+Cada argumento apunta a un campo definido **antes** (un dato o un calculado anterior).
+
+## 4. Reglas
+
+Cada regla usa **una** condición sobre un campo numérico (un dato o un calculado):
+`mayor_que` o `menor_que`.
 
 | `accion` | Efecto | Requiere |
 |---|---|---|
@@ -51,9 +77,10 @@ Cada regla usa **una** condición sobre un campo numérico: `mayor_que` o `menor
 - Si aplican varias de aprobación, decide la primera de la lista.
 - Nadie puede aprobar sus propias solicitudes.
 
-## 4. Aplica y verifica
+## 5. Aplica y verifica
 
 ```bash
+make validate    # revisa empresa/ sin levantar nada
 make reload      # reinicia el servidor MCP; valida empresa/ al arrancar
 ```
 
@@ -72,7 +99,10 @@ Para probar las reglas sin Telegram, usa la API en `http://127.0.0.1:8000/docs`
 
 - **Documentos** (`documentos/*.md`): el encabezado `roles` decide quién los puede leer.
   `make reload` re-indexa solo si el contenido o los roles cambiaron.
-- **Productos** (`catalogo.yaml`) y **empleados** (`empleados.yaml`): `make reload`.
-- **Un rol nuevo** requiere además su token (`ROLE_TOKEN_<ROL>` en `.env.example` y en
-  `docker-compose.yml`), un servidor MCP y un agente en `openclaw/openclaw.json5`, su carpeta
-  en `openclaw/agentes/` y un bot de Telegram.
+- **Productos** (`catalogo.yaml`), **empleados** (`empleados.yaml`) y **festivos**
+  (`calendario.yaml`): `make reload`. En modo directorio, además `make directorio`.
+- **Un rol nuevo:** `make new-role ROL=compras NOMBRE="Compras" PERSONA="Carla Ríos"`.
+  Crea el rol, su persona demo, sus variables, su agente y regenera la config de OpenClaw;
+  al terminar te dice qué falta (describir el rol, darle documentos y crear su bot).
+- **La config de OpenClaw** (`openclaw/openclaw.json5`) se genera: edita
+  `openclaw.plantilla.json5` o `empresa/` y ejecuta `make openclaw-config`.

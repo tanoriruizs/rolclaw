@@ -1,6 +1,7 @@
 # ADR 0005: Un bot por rol en la demo
 
-**Estado:** aceptada (para la demo)
+**Estado:** aceptada (para la demo; el modo directorio del
+[ADR 0007](0007-identidad-por-persona.md) cubre el caso de un solo bot)
 
 ## Contexto
 
@@ -27,4 +28,5 @@ los bots se protege con *pairing*.
 - Con una sola cuenta de Telegram se pueden mostrar los cuatro roles.
 - El rol pertenece al bot, no a la persona: quien tenga acceso a un bot actúa como su rol.
   Se mitiga con *pairing* y es una limitación documentada en `SECURITY.md`.
-- Producción (hoja de ruta): un solo bot, ruteo por usuario y rol desde Entra ID (SSO).
+- Un solo bot con ruteo por usuario ya existe como modo directorio; lo que queda en la
+  hoja de ruta es que el rol venga de Entra ID (SSO).
