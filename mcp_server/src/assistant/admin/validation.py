@@ -16,7 +16,6 @@ from assistant.company import Company, CompanyConfigError, load_company
 
 ENV_EXAMPLE = Path(".env.example")
 COMPOSE = Path("docker-compose.yml")
-CI = Path(".github/workflows/ci.yml")
 # Variables por rol que debe recibir cada servicio de docker compose.
 COMPOSE_VARS = {
     "mcp-server": ("ROLE_TOKEN_", "TELEGRAM_BOT_TOKEN_"),
@@ -46,7 +45,6 @@ def validate(root: Path) -> Report:
     _check_agent_folders(root, company, report)
     _check_env_example(root, company, report)
     _check_compose(root, company, report)
-    _check_ci(root, company, report)
     _check_generated(root, company, report)
     _summarize(company, report)
     return report
@@ -84,15 +82,6 @@ def _check_compose(root: Path, company: Company, report: Report) -> None:
         for variable in _role_variables(company, prefixes):
             if variable not in environment:
                 report.problems.append(f"{COMPOSE}: el servicio {service} no recibe {variable}")
-
-
-def _check_ci(root: Path, company: Company, report: Report) -> None:
-    if not (root / CI).is_file():
-        return
-    text = (root / CI).read_text(encoding="utf-8")
-    for variable in _role_variables(company, ("TELEGRAM_BOT_TOKEN_",)):
-        if variable not in text:
-            report.problems.append(f"{CI}: falta {variable} (compose no arranca sin ella)")
 
 
 def _check_generated(root: Path, company: Company, report: Report) -> None:

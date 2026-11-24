@@ -100,8 +100,7 @@ def repo_copy(tmp_path: Path) -> Path:
     destination = tmp_path / "repo"
     for folder in ("empresa", "openclaw"):
         shutil.copytree(REPO / folder, destination / folder, ignore=shutil.ignore_patterns("local"))
-    for name in (".env.example", "docker-compose.yml", ".github/workflows/ci.yml"):
-        (destination / name).parent.mkdir(parents=True, exist_ok=True)
+    for name in (".env.example", "docker-compose.yml"):
         shutil.copyfile(REPO / name, destination / name)
     return destination
 

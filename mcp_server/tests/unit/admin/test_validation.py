@@ -66,8 +66,7 @@ def test_the_repository_is_valid() -> None:
         (
             _edit(
                 "docker-compose.yml",
-                "      TELEGRAM_BOT_TOKEN_GERENTE: ${TELEGRAM_BOT_TOKEN_GERENTE:?crea los bots con"
-                " @BotFather}\n",
+                "      TELEGRAM_BOT_TOKEN_GERENTE: ${TELEGRAM_BOT_TOKEN_GERENTE:-}\n",
                 "",
             ),
             "docker-compose.yml: el servicio openclaw no recibe TELEGRAM_BOT_TOKEN_GERENTE",
@@ -76,10 +75,6 @@ def test_the_repository_is_valid() -> None:
         (
             _edit("docker-compose.yml", "services:", "services: [roto"),
             "docker-compose.yml: YAML inválido",
-        ),
-        (
-            _edit(".github/workflows/ci.yml", "      TELEGRAM_BOT_TOKEN_RH: sin-uso-en-ci\n", ""),
-            ".github/workflows/ci.yml: falta TELEGRAM_BOT_TOKEN_RH",
         ),
         (
             _edit("openclaw/openclaw.json5", "cardinal-ventas__*", "*"),
@@ -117,13 +112,11 @@ def test_only_the_broken_thing_is_reported(repo_copy: Path) -> None:
 def test_compose_services_are_checked_separately(repo_copy: Path) -> None:
     _edit(
         "docker-compose.yml",
-        "      ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:?ejecuta make tokens}\n"
-        "      ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:?ejecuta make tokens}\n"
-        "      ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:?ejecuta make tokens}\n"
-        "      SERVICENOW_BASE_URL",
-        "      ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:?ejecuta make tokens}\n"
-        "      ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:?ejecuta make tokens}\n"
-        "      SERVICENOW_BASE_URL",
+        "      DIRECTORY_TOKEN_SECRET: ${DIRECTORY_TOKEN_SECRET:-}\n"
+        "      ROLE_TOKEN_VENTAS: ${ROLE_TOKEN_VENTAS:-}\n"
+        "      ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:-}\n",
+        "      DIRECTORY_TOKEN_SECRET: ${DIRECTORY_TOKEN_SECRET:-}\n"
+        "      ROLE_TOKEN_VENTAS: ${ROLE_TOKEN_VENTAS:-}\n",
     )(repo_copy)
 
     assert validate(repo_copy).problems == [
@@ -149,9 +142,3 @@ def test_a_role_without_documents_is_only_a_warning(repo_copy: Path) -> None:
 
     assert report.ok
     assert report.warnings == ["el rol 'rh' no puede leer ningún documento"]
-
-
-def test_ci_workflow_is_optional(repo_copy: Path) -> None:
-    (repo_copy / ".github/workflows/ci.yml").unlink()
-
-    assert validate(repo_copy).ok

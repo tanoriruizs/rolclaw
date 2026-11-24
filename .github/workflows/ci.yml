@@ -43,10 +43,6 @@ jobs:
     env:
       # Solo para que compose pueda leer el servicio openclaw; aquí no se levanta.
       ANTHROPIC_API_KEY: sin-uso-en-ci
-      TELEGRAM_BOT_TOKEN_VENTAS: sin-uso-en-ci
-      TELEGRAM_BOT_TOKEN_RH: sin-uso-en-ci
-      TELEGRAM_BOT_TOKEN_EMPLEADO: sin-uso-en-ci
-      TELEGRAM_BOT_TOKEN_GERENTE: sin-uso-en-ci
     steps:
       - uses: actions/checkout@v7
 

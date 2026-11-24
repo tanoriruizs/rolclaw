@@ -152,7 +152,12 @@ def test_directory_ignores_the_demo_bots(company: Company) -> None:
 
 @pytest.mark.parametrize(
     "changes",
-    [{"telegram_bot_token": None}, {"telegram_users": ""}, {"notifications_enabled": False}],
+    [
+        {"telegram_bot_token": None},
+        {"telegram_bot_token": SecretStr("")},  # compose pasa la variable vacía
+        {"telegram_users": ""},
+        {"notifications_enabled": False},
+    ],
 )
 def test_directory_is_disabled_without_complete_configuration(
     company: Company, changes: dict[str, object]

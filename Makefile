@@ -2,7 +2,7 @@
 UV := uv
 COMPOSE := docker compose
 
-.PHONY: help setup tokens validate new-role openclaw-config up reload pairing demo-reset \
+.PHONY: help setup tokens validate new-role openclaw-config directorio check-env up reload pairing demo-reset \
 	down logs ps ingest sandbox-check run lint format test secrets ci
 
 help: ## Muestra esta ayuda
@@ -25,7 +25,13 @@ new-role: ## Crea un rol: make new-role ROL=compras NOMBRE="Compras" PERSONA="Ca
 openclaw-config: ## Regenera openclaw/openclaw.json5 a partir de empresa/
 	$(UV) run python -m assistant.admin openclaw
 
-up: ## Construye y levanta los servicios; espera a que estén sanos
+directorio: ## Modo directorio: prepara un solo bot con un agente por persona
+	$(UV) run --env-file .env python -m assistant.admin directorio
+
+check-env:
+	@python3 scripts/check_env.py
+
+up: check-env ## Construye y levanta los servicios; espera a que estén sanos
 	$(COMPOSE) up -d --build --wait redis servicenow-mock sandbox mcp-server
 	@# OpenClaw copia su config y sus agentes del repo al arrancar: se recrea para aplicar cambios.
 	$(COMPOSE) up -d --wait --force-recreate --no-deps openclaw

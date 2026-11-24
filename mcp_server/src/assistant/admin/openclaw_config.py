@@ -6,6 +6,7 @@ En los dos casos el archivo generado no lleva secretos: solo nombres de variable
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections.abc import Mapping
@@ -22,6 +23,7 @@ TEMPLATE = Path("openclaw/openclaw.plantilla.json5")
 DEMO_CONFIG = Path("openclaw/openclaw.json5")
 AGENTS_DIR = Path("openclaw/agentes")
 LOCAL_DIR = Path("openclaw/local")  # modo directorio: no se sube al repo
+FINGERPRINT_SOURCES = (Path("empresa/empleados.yaml"), Path("empresa/roles.yaml"))
 HEADER = (
     "// GENERADO con `make openclaw-config` a partir de openclaw.plantilla.json5 y empresa/.\n"
     "// No lo edites a mano: cambia la plantilla o empresa/ y vuelve a generarlo.\n"
@@ -29,15 +31,9 @@ HEADER = (
 MCP_URL = "http://mcp-server:8000/mcp"
 STATE_DIR = "/home/node/.openclaw"
 SYSTEM_AGENT = "sistema"
-GUEST_AGENT = "invitado"
-RESERVED_AGENTS = frozenset({SYSTEM_AGENT, GUEST_AGENT})
+RESERVED_AGENTS = frozenset({SYSTEM_AGENT})
 PLACEHOLDERS = ("__SERVIDORES_MCP__", "__AGENTES__", "__TELEGRAM__", "__BINDINGS__")
 _PLACEHOLDER = re.compile(r"__[A-Z_]+__")
-GUEST_SOUL = (
-    "# Sin acceso\n\n"
-    "Esta persona no está registrada en el directorio de la empresa. No tienes herramientas.\n"
-    "Responde solo que no tiene acceso al asistente y que debe pedirlo al área de Sistemas.\n"
-)
 
 
 class OpenClawConfigError(Exception):
@@ -122,8 +118,8 @@ def _servers(agents: list[Agent]) -> dict[str, object]:
     }
 
 
-def _toolless(name: str, agent_id: str, **extra: object) -> dict[str, object]:
-    return {"name": name, "workspace": _workspace(agent_id), "tools": {"allow": []}, **extra}
+def _toolless(name: str, agent_id: str) -> dict[str, object]:
+    return {"name": name, "workspace": _workspace(agent_id), "tools": {"allow": []}}
 
 
 def _entries(agents: list[Agent]) -> dict[str, object]:
@@ -173,12 +169,9 @@ def directory_blocks(company: Company, chats: Mapping[str, str]) -> dict[str, ob
     agents = directory_agents(company, chats)
     return {
         "__SERVIDORES_MCP__": _servers(agents),
-        "__AGENTES__": {
-            SYSTEM_AGENT: _toolless("Sistema", SYSTEM_AGENT),
-            # Si una conversación no coincide con nadie, cae aquí: un agente sin herramientas.
-            GUEST_AGENT: _toolless("Sin acceso", GUEST_AGENT, default=True),
-        }
-        | _entries(agents),
+        # Sin agente por defecto: con ownership "explicit", OpenClaw no atiende una
+        # conversación que no coincide con ningún binding.
+        "__AGENTES__": {SYSTEM_AGENT: _toolless("Sistema", SYSTEM_AGENT)} | _entries(agents),
         "__TELEGRAM__": {
             "enabled": True,
             "dmPolicy": "allowlist",
@@ -243,6 +236,16 @@ def demo_files(root: Path, company: Company) -> dict[Path, str]:
     return files
 
 
+def fingerprint(root: Path, secret: SecretStr, telegram_users: str) -> str:
+    """Huella de lo que define el modo directorio (igual que en scripts/check_env.py)."""
+    digest = hashlib.sha256()
+    for part in (secret.get_secret_value(), telegram_users.strip()):
+        digest.update(part.encode() + b"\0")
+    for path in FINGERPRINT_SOURCES:
+        digest.update((root / path).read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
 def directory_files(
     root: Path, company: Company, secret: SecretStr, chats: Mapping[str, str]
 ) -> dict[Path, str]:
@@ -255,7 +258,6 @@ def directory_files(
         LOCAL_DIR / "directorio.env": "".join(
             f"{agent.token_env}={employee_token(secret, agent.person.id)}\n" for agent in agents
         ),
-        LOCAL_DIR / "agentes" / GUEST_AGENT / "SOUL.md": GUEST_SOUL,
     }
     for agent in agents:
         folder = LOCAL_DIR / "agentes" / agent.id

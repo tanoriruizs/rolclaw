@@ -62,17 +62,23 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      ROLE_TOKEN_VENTAS: ${ROLE_TOKEN_VENTAS:?ejecuta make tokens}
-      ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:?ejecuta make tokens}
-      ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:?ejecuta make tokens}
-      ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:?ejecuta make tokens}
+      # demo: un token por rol. directorio: un token por persona (ver README).
+      AUTH_MODE: ${AUTH_MODE:-demo}
+      DIRECTORY_TOKEN_SECRET: ${DIRECTORY_TOKEN_SECRET:-}
+      ROLE_TOKEN_VENTAS: ${ROLE_TOKEN_VENTAS:-}
+      ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:-}
+      ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:-}
+      ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:-}
       SERVICENOW_BASE_URL: ${SERVICENOW_BASE_URL:-http://servicenow-mock:8100}
       SERVICENOW_CLIENT_ID: ${SERVICENOW_CLIENT_ID:-cardinal-assistant}
       SERVICENOW_CLIENT_SECRET: ${SERVICENOW_CLIENT_SECRET:?ejecuta make tokens}
       SANDBOX_SOCKET: /run/sandbox/sandbox.sock
-      # Avisos por Telegram (opcionales): el bot de cada rol le escribe a TELEGRAM_OWNER_ID.
+      # Avisos por Telegram (opcionales). Demo: el bot de cada rol le escribe a
+      # TELEGRAM_OWNER_ID. Directorio: el bot único le escribe a cada persona.
       NOTIFICATIONS_ENABLED: ${NOTIFICATIONS_ENABLED:-true}
       TELEGRAM_OWNER_ID: ${TELEGRAM_OWNER_ID:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_USERS: ${TELEGRAM_USERS:-}
       TELEGRAM_BOT_TOKEN_VENTAS: ${TELEGRAM_BOT_TOKEN_VENTAS:-}
       TELEGRAM_BOT_TOKEN_RH: ${TELEGRAM_BOT_TOKEN_RH:-}
       TELEGRAM_BOT_TOKEN_EMPLEADO: ${TELEGRAM_BOT_TOKEN_EMPLEADO:-}
@@ -105,14 +111,21 @@ services:
       OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_GATEWAY_TOKEN:?ejecuta make tokens}
       OPENCLAW_MODEL: ${OPENCLAW_MODEL:-anthropic/claude-sonnet-5-5}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?pon tu API key de Anthropic en .env}
-      ROLE_TOKEN_VENTAS: ${ROLE_TOKEN_VENTAS:?ejecuta make tokens}
-      ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:?ejecuta make tokens}
-      ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:?ejecuta make tokens}
-      ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:?ejecuta make tokens}
-      TELEGRAM_BOT_TOKEN_VENTAS: ${TELEGRAM_BOT_TOKEN_VENTAS:?crea los bots con @BotFather}
-      TELEGRAM_BOT_TOKEN_RH: ${TELEGRAM_BOT_TOKEN_RH:?crea los bots con @BotFather}
-      TELEGRAM_BOT_TOKEN_EMPLEADO: ${TELEGRAM_BOT_TOKEN_EMPLEADO:?crea los bots con @BotFather}
-      TELEGRAM_BOT_TOKEN_GERENTE: ${TELEGRAM_BOT_TOKEN_GERENTE:?crea los bots con @BotFather}
+      # start.sh elige la config según el modo; `make up` revisa antes qué variables faltan.
+      AUTH_MODE: ${AUTH_MODE:-demo}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      ROLE_TOKEN_VENTAS: ${ROLE_TOKEN_VENTAS:-}
+      ROLE_TOKEN_RH: ${ROLE_TOKEN_RH:-}
+      ROLE_TOKEN_EMPLEADO: ${ROLE_TOKEN_EMPLEADO:-}
+      ROLE_TOKEN_GERENTE: ${ROLE_TOKEN_GERENTE:-}
+      TELEGRAM_BOT_TOKEN_VENTAS: ${TELEGRAM_BOT_TOKEN_VENTAS:-}
+      TELEGRAM_BOT_TOKEN_RH: ${TELEGRAM_BOT_TOKEN_RH:-}
+      TELEGRAM_BOT_TOKEN_EMPLEADO: ${TELEGRAM_BOT_TOKEN_EMPLEADO:-}
+      TELEGRAM_BOT_TOKEN_GERENTE: ${TELEGRAM_BOT_TOKEN_GERENTE:-}
+    # Modo directorio: los tokens por persona que genera `make directorio`.
+    env_file:
+      - path: openclaw/local/directorio.env
+        required: false
     # start.sh copia la config y los agentes del repo al estado y arranca la imagen normal.
     entrypoint: ["sh", "/config-src/start.sh"]
     command: ["node", "openclaw.mjs", "gateway"]

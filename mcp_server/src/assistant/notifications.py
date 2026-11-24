@@ -94,7 +94,7 @@ class Contacts:
         if not settings.notifications_enabled:
             return
         bot = settings.telegram_bot_token
-        if bot is not None:
+        if bot is not None and bot.get_secret_value():
             self._people = {
                 employee_id: Recipient(bot, chat) for employee_id, chat in chats.items()
             }

@@ -14,6 +14,7 @@ from assistant.admin.openclaw_config import (
     demo_files,
     directory_agents,
     directory_files,
+    fingerprint,
 )
 from assistant.admin.scaffold import DEFAULT_TOOLS, NewRole, ScaffoldError, new_role
 from assistant.admin.validation import validate
@@ -90,6 +91,8 @@ def _directory(root: Path, settings: Settings) -> int:
     company = load_company(root / "empresa")
     chats = settings.telegram_chat_ids()
     files = directory_files(root, company, secret, chats)
+    # `make up` compara esta huella para avisar si hay que volver a generar.
+    files[LOCAL_DIR / "huella"] = fingerprint(root, secret, settings.telegram_users) + "\n"
     shutil.rmtree(root / LOCAL_DIR, ignore_errors=True)  # sin agentes de personas que ya no están
     _write(root, files)
     (root / LOCAL_DIR / "directorio.env").chmod(0o600)

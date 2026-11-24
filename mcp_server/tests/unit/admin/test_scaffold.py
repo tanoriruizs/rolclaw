@@ -37,7 +37,6 @@ def test_new_role_leaves_a_valid_repository(repo_copy: Path) -> None:
     assert report.problems == []
     assert sorted(str(path) for path in changed) == [
         ".env.example",
-        ".github/workflows/ci.yml",
         "docker-compose.yml",
         "empresa/empleados.yaml",
         "empresa/roles.yaml",
@@ -87,12 +86,9 @@ def test_new_role_reaches_every_service(repo_copy: Path) -> None:
     env_example = (repo_copy / ".env.example").read_text(encoding="utf-8")
     config = parse_json5((repo_copy / "openclaw/openclaw.json5").read_text(encoding="utf-8"))
 
-    assert server_env["ROLE_TOKEN_COMPRAS"] == "${ROLE_TOKEN_COMPRAS:?ejecuta make tokens}"
-    assert server_env["TELEGRAM_BOT_TOKEN_COMPRAS"] == "${TELEGRAM_BOT_TOKEN_COMPRAS:-}"
-    assert gateway_env["ROLE_TOKEN_COMPRAS"] == "${ROLE_TOKEN_COMPRAS:?ejecuta make tokens}"
-    assert gateway_env["TELEGRAM_BOT_TOKEN_COMPRAS"] == (
-        "${TELEGRAM_BOT_TOKEN_COMPRAS:?crea los bots con @BotFather}"
-    )
+    for environment in (server_env, gateway_env):
+        assert environment["ROLE_TOKEN_COMPRAS"] == "${ROLE_TOKEN_COMPRAS:-}"
+        assert environment["TELEGRAM_BOT_TOKEN_COMPRAS"] == "${TELEGRAM_BOT_TOKEN_COMPRAS:-}"
     assert "ROLE_TOKEN_GERENTE=\nROLE_TOKEN_COMPRAS=\n" in env_example
     assert "TELEGRAM_BOT_TOKEN_GERENTE=\nTELEGRAM_BOT_TOKEN_COMPRAS=\n" in env_example
     assert config["agents"]["entries"]["compras"] == {
@@ -104,8 +100,6 @@ def test_new_role_reaches_every_service(repo_copy: Path) -> None:
         "agentId": "compras",
         "match": {"channel": "telegram", "accountId": "compras"},
     }
-    ci = (repo_copy / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    assert "      TELEGRAM_BOT_TOKEN_COMPRAS: sin-uso-en-ci\n" in ci
 
 
 def test_new_role_writes_the_agent_files(repo_copy: Path) -> None:
@@ -197,7 +191,6 @@ def test_custom_tools_are_respected(repo_copy: Path) -> None:
         (NewRole("compras-mx", "Compras", "Carla Ríos"), "minúsculas"),
         (NewRole("", "Compras", "Carla Ríos"), "minúsculas"),
         (NewRole("sistema", "Sistema", "Carla Ríos"), "nombre reservado"),
-        (NewRole("invitado", "Invitado", "Carla Ríos"), "nombre reservado"),
         (NewRole("compras", " ", "Carla Ríos"), "falta NOMBRE"),
         (NewRole("compras", "Compras", ""), "falta PERSONA"),
         (NewRole("compras", "Compras", "Carla\nrol: gerente"), "falta PERSONA"),
@@ -254,14 +247,14 @@ def test_files_with_another_layout_are_not_guessed(repo_copy: Path) -> None:
     assert _fingerprint(repo_copy) == before
 
 
-def test_the_ci_workflow_is_optional(repo_copy: Path) -> None:
-    (repo_copy / ".github/workflows/ci.yml").unlink()
+def test_a_missing_env_example_stops_before_writing(repo_copy: Path) -> None:
+    (repo_copy / ".env.example").unlink()
+    before = _fingerprint(repo_copy)
 
-    changed = new_role(repo_copy, COMPRAS, today=TODAY)
+    with pytest.raises(ScaffoldError, match=r"\.env\.example: el archivo no existe"):
+        new_role(repo_copy, COMPRAS)
 
-    assert Path(".github/workflows/ci.yml") not in changed
-    assert not (repo_copy / ".github/workflows/ci.yml").exists()
-    assert validate(repo_copy).ok
+    assert _fingerprint(repo_copy) == before
 
 
 # --- Líneas por rol en .env.example, docker-compose.yml y ci.yml -------------------------

@@ -11,12 +11,12 @@ from datetime import date
 from pathlib import Path
 
 from assistant.admin.openclaw_config import AGENTS_DIR, LOCAL_DIR, RESERVED_AGENTS, demo_files
-from assistant.admin.validation import CI, COMPOSE, ENV_EXAMPLE, validate
+from assistant.admin.validation import COMPOSE, ENV_EXAMPLE, validate
 from assistant.company import Tool, load_company
 
 ROLES = Path("empresa/roles.yaml")
 EMPLOYEES = Path("empresa/empleados.yaml")
-ROLE_LINE_FILES = (ENV_EXAMPLE, COMPOSE, CI)
+ROLE_LINE_FILES = (ENV_EXAMPLE, COMPOSE)
 DEFAULT_TOOLS = (
     Tool.BUSCAR_CONOCIMIENTO,
     Tool.LISTAR_FLUJOS,

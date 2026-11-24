@@ -168,7 +168,6 @@ def test_directory_has_one_agent_per_registered_person(company: Company) -> None
 
     assert list(config["agents"]["entries"]) == [
         "sistema",
-        "invitado",
         "e-001",
         "e-101",
         "e-102",
@@ -182,17 +181,19 @@ def test_directory_has_one_agent_per_registered_person(company: Company) -> None
         "cardinal-e-301",
     ]
     for agent_id, entry in config["agents"]["entries"].items():
-        own = [] if agent_id in {"sistema", "invitado"} else [f"cardinal-{agent_id}__*"]
+        own = [] if agent_id == "sistema" else [f"cardinal-{agent_id}__*"]
         assert entry["tools"] == {"allow": own}
 
 
-def test_directory_strangers_reach_an_agent_without_tools(company: Company) -> None:
+def test_directory_strangers_reach_nobody(company: Company) -> None:
     config = _directory(company)
     telegram = config["channels"]["telegram"]
     defaults = [k for k, entry in config["agents"]["entries"].items() if entry.get("default")]
 
-    # Solo escriben quienes están en la lista; y si algo no coincide, cae en "invitado".
-    assert defaults == ["invitado"]
+    # Solo escriben quienes están en la lista. Y no hay agente por defecto: con ownership
+    # "explicit", OpenClaw no atiende una conversación que no coincide con ningún binding.
+    assert defaults == []
+    assert config["agents"]["ownership"] == "explicit"
     assert telegram["dmPolicy"] == "allowlist"
     assert telegram["allowFrom"] == ["9001", "9101", "9102", "9301"]
     assert telegram["groupPolicy"] == "disabled"
@@ -250,7 +251,6 @@ def test_directory_agents_get_the_soul_of_their_role_and_their_own_name(
     assert files[LOCAL_DIR / "agentes" / "e-101" / "SOUL.md"] == ventas_soul
     assert files[LOCAL_DIR / "agentes" / "e-102" / "SOUL.md"] == ventas_soul
     assert "- Nombre: Sofía Herrera\n" in files[LOCAL_DIR / "agentes" / "e-102" / "USER.md"]
-    assert "no tiene acceso" in files[LOCAL_DIR / "agentes" / "invitado" / "SOUL.md"]
     assert LOCAL_DIR / "agentes" / "e-302" / "SOUL.md" not in files  # Mariana no dio su chat
 
 
@@ -279,11 +279,11 @@ def test_directory_rejects_employee_ids_that_collide(company: Company) -> None:
 
 
 def test_directory_rejects_reserved_employee_ids(company: Company) -> None:
-    odd = company.empleados[1].model_copy(update={"id": "Invitado"})
+    odd = company.empleados[1].model_copy(update={"id": "Sistema"})
     clash = company.model_construct(**{**dict(company), "empleados": (*company.empleados, odd)})
 
-    with pytest.raises(OpenClawConfigError, match="reservados: invitado"):
-        directory_blocks(clash, {"Invitado": "1"})
+    with pytest.raises(OpenClawConfigError, match="reservados: sistema"):
+        directory_blocks(clash, {"Sistema": "1"})
 
 
 def test_template_is_the_single_source_of_the_static_part() -> None:
