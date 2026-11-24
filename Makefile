@@ -2,7 +2,7 @@
 UV := uv
 COMPOSE := docker compose
 
-.PHONY: help setup tokens validate new-role openclaw-config directorio check-env up reload pairing demo-reset \
+.PHONY: help setup tokens validate new-role openclaw-config directorio check-env up reload pairing demo-reset eval \
 	down logs ps ingest sandbox-check run lint format test secrets ci
 
 help: ## Muestra esta ayuda
@@ -50,6 +50,9 @@ demo-reset: ## Borra solicitudes y auditoría para grabar la demo desde REQ00100
 		"redis-cli -n 1 --scan --pattern 'sn:sc_request*' | xargs -r redis-cli -n 1 del; \
 		redis-cli -n 0 del audit:events" >/dev/null
 	@echo "Demo en blanco: la siguiente solicitud será REQ0010001."
+
+eval: demo-reset ## Evals de los agentes con el modelo real (gasta créditos; borra la demo)
+	python3 scripts/run_evals.py
 
 down: ## Detiene los servicios (los datos de Redis se conservan)
 	$(COMPOSE) down
